@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@layer components {
+  .nav-link {
+    @apply pb-1 transition-colors hover:text-amber-500;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg bg-amber-500 text-white font-semibold hover:bg-amber-600 transition-colors;
+  }
+
+  /* Hide scrollbar untuk catalog container tapi tetap bisa scroll */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE dan Edge */
+    scrollbar-width: none;      /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari dan Opera */
+  }
+
+  /* Brand filter opacity untuk inactive state */
+  .brand-filter {
+    @apply opacity-100 transition-opacity duration-300;
+  }
+
+  .brand-filter.opacity-80 {
+    @apply opacity-80;
+  }
+
+  .brand-filter.opacity-100 {
+    @apply opacity-100;
+  }
+}
+
+.testimonial-swiper,
+  .testimonial-swiper .swiper-wrapper,
+  .testimonial-swiper .swiper-slide {
+    overflow: visible !important;
+  }
+
+/* Testimonial Card Responsive Styling */
+@media (max-width: 640px) {
+  /* Yellow background responsive for mobile */
+  .testimonial-bg-accent {
+    margin-top: 15px !important;
+    margin-left: -15px !important;
+    height: 80% !important;
+  }
+  
+  /* Profile image positioning for mobile */
+  .testimonial-profile-img {
+    top: -32px !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1023px) {
+  /* Yellow background responsive for tablet */
+  .testimonial-bg-accent {
+    margin-top: 60px !important;
+    margin-left: -20px !important;
+    height: 70% !important;
+  }
+  
+  /* Profile image positioning for tablet */
+  .testimonial-profile-img {
+    top: -50px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Yellow background responsive for desktop */
+  .testimonial-bg-accent {
+    margin-top: 70px !important;
+    margin-left: -25px !important;
+    height: 70% !important;
+  }
+  
+  /* Profile image positioning for desktop */
+  .testimonial-profile-img {
+    top: -70px !important;
+  }
+}
