@@ -1,0 +1,13 @@
+User-agent: *
+Disallow: /src/
+Disallow: /assets/
+Disallow: *.js
+Disallow: *.css
+Disallow: /vite.svg
+Allow: /
+
+# Prevent indexing of source code
+User-agent: *
+Disallow: /src/
+Disallow: /assets/js/
+Disallow: /assets/css/

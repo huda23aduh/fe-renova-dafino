@@ -1,14 +1,12 @@
-import { login as loginApi } from "../services/api.js";
-
-export default function AdminLoginPage() {
-  // attach login handler AFTER DOM is rendered
-  setTimeout(() => initLoginHandler(), 0);
-
+export default function LoginPage() {
   return `
     <section class="min-h-screen bg-gradient-to-br from-gray-200 via-gray-100 to-gray-300 flex items-center justify-center px-4 py-2">
       <div class="max-w-6xl w-full grid lg:grid-cols-2 rounded-[32px] shadow-2xl bg-white overflow-hidden">
-
         <div class="relative bg-gradient-to-br from-[#efefef] via-white to-[#d9d9d9] flex flex-col justify-center items-center text-center p-8 sm:p-12 gap-6">
+          <a href="#home" class="absolute top-4 left-4 flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span class="text-sm font-semibold">Kembali ke Home</span>
+          </a>
           <h1 class="text-3xl sm:text-4xl font-extrabold tracking-widest text-gray-800">RENOVA MOBIL</h1>
           <img
             src="/images/car_login.png"
@@ -26,15 +24,15 @@ export default function AdminLoginPage() {
             </p>
           </div>
 
-          <form id="loginForm" class="mt-8 space-y-6">
+          <form id="login-form" class="mt-8 space-y-6">
             <div>
               <label class="flex items-center justify-between text-sm font-semibold text-gray-900">
                 <span>Email atau No Telepon<span class="text-red-500">*</span></span>
               </label>
               <input
                 type="text"
-                value="admin@example.com"
                 name="username"
+                required
                 placeholder="Masukkan alamat email atau nomor"
                 class="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
               />
@@ -51,18 +49,23 @@ export default function AdminLoginPage() {
                 </span>
                 <input
                   type="password"
-                  value="admin123"
                   name="password"
+                  required
                   placeholder="Masukkan password"
-                  class="w-full rounded-2xl border border-gray-300 pl-12 pr-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  class="w-full rounded-2xl border border-gray-300 pl-12 pr-12 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
                 />
+                <button type="button" id="toggle-password" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
               </div>
               <p class="mt-2 text-xs text-gray-500">Password harus berupa huruf besar, huruf kecil, angka dan simbol.</p>
             </div>
 
+            <div id="login-error" class="hidden text-red-500 text-sm text-center bg-red-50 p-3 rounded-lg"></div>
+
             <div class="flex flex-wrap items-center justify-between text-sm text-gray-600 gap-3">
               <label class="inline-flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-[#14213D] focus:ring-[#14213D]" />
+                <input type="checkbox" name="remember" class="h-4 w-4 rounded border-gray-300 text-[#14213D] focus:ring-[#14213D]" />
                 Ingat Saya
               </label>
               <a href="#forgot-password" class="text-blue-600 font-semibold hover:underline">Lupa Password?</a>
@@ -70,7 +73,8 @@ export default function AdminLoginPage() {
 
             <button
               type="submit"
-              class="w-full rounded-2xl bg-[#14213D] text-white font-semibold py-3 hover:bg-[#0f1a33] transition"
+              id="login-btn"
+              class="w-full rounded-2xl bg-[#14213D] text-white font-semibold py-3 hover:bg-[#1a2a4d] transition-colors"
             >
               Masuk
             </button>
@@ -83,6 +87,7 @@ export default function AdminLoginPage() {
 
             <button
               type="button"
+              id="google-login-btn"
               class="w-full rounded-2xl border border-gray-300 py-3 flex items-center justify-center gap-3 font-semibold text-gray-800 hover:border-gray-400 transition-colors"
             >
               <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="h-5 w-5" />
@@ -93,6 +98,13 @@ export default function AdminLoginPage() {
               Sudah menjadi mitra di Renova Mobil?
               <a href="#mitra-login" class="text-blue-600 font-semibold hover:underline">Masuk Jadi Mitra</a>
             </p>
+
+            <div class="mt-4 pt-4 border-t border-gray-200">
+              <a href="#admin-login" class="flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition">
+                <i class="fa-solid fa-user-shield"></i>
+                <span>Masuk sebagai Admin</span>
+              </a>
+            </div>
           </form>
         </div>
       </div>
@@ -100,42 +112,81 @@ export default function AdminLoginPage() {
   `;
 }
 
-function initLoginHandler() {
-  const form = document.getElementById("loginForm");
+export function mount() {
+  const form = document.getElementById('login-form');
+  const loginError = document.getElementById('login-error');
+  const togglePassword = document.getElementById('toggle-password');
+  const passwordInput = form.querySelector('input[name="password"]');
 
-  if (!form) return;
+  // Toggle password visibility
+  if (togglePassword && passwordInput) {
+    togglePassword.addEventListener('click', () => {
+      const type = passwordInput.type === 'password' ? 'text' : 'password';
+      passwordInput.type = type;
+      const icon = togglePassword.querySelector('i');
+      icon.classList.toggle('fa-eye');
+      icon.classList.toggle('fa-eye-slash');
+    });
+  }
 
-  form.addEventListener("submit", async (e) => {
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
+    
+    const formData = new FormData(form);
+    const username = formData.get('username');
+    const password = formData.get('password');
+    const remember = formData.get('remember');
 
-    const username = form.username.value.trim();
-    const password = form.password.value.trim();
+    // Get registered users from localStorage
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    
+    // Find user by email or phone
+    const user = users.find(u => u.email === username || u.phone === username);
 
-    if (!username || !password) {
-      alert("Harap isi semua field.");
+    if (!user) {
+      loginError.textContent = 'Email/No Telepon tidak terdaftar';
+      loginError.classList.remove('hidden');
       return;
     }
 
-    try {
-      const result = await loginApi({ email: username, password });
-
-      if (result.token) {
-
-        // FIX: save using SAME KEY as your router
-        localStorage.setItem("token", result.token);
-
-        alert("Login sukses!");
-
-        // FIX: use hash router (NO page reload)
-        window.location.hash = "#home";   // or "#dashboard"
-
-      } else {
-        alert(result.message || "Login gagal.");
-      }
-
-    } catch (err) {
-      alert("Kesalahan server. Coba lagi.");
-      console.error("Login Error:", err);
+    if (user.password !== password) {
+      loginError.textContent = 'Password salah';
+      loginError.classList.remove('hidden');
+      return;
     }
+
+    // Login success
+    loginError.classList.add('hidden');
+    
+    // Save session
+    const session = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      loggedIn: true
+    };
+
+    if (remember) {
+      localStorage.setItem('userSession', JSON.stringify(session));
+    } else {
+      sessionStorage.setItem('userSession', JSON.stringify(session));
+    }
+
+    // Save toast message and redirect
+    sessionStorage.setItem('pendingToast', JSON.stringify({
+      message: 'Login berhasil! Selamat datang, ' + user.name,
+      type: 'success'
+    }));
+    window.location.hash = '#home';
+    window.location.reload();
   });
+
+  // Google login placeholder
+  const googleBtn = document.getElementById('google-login-btn');
+  if (googleBtn) {
+    googleBtn.addEventListener('click', () => {
+      window.showToast('Fitur login dengan Google akan segera tersedia', 'info');
+    });
+  }
 }

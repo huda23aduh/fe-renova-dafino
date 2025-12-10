@@ -1,5 +1,5 @@
 // Mock data untuk cars (50 mobil)
-export const carsData = [
+export let carsData = [
   {
     id: 1,
     brand: "DAIHATSU TERIOS TS EXTRA MT 2016",
@@ -65,7 +65,7 @@ export const carsData = [
   },
   {
     id: 4,
-    brand: "TOYOTA INNOVA E AT 2011",
+    brand: "TOYOTA INNOVA E AT 2011 aaaaaa",
     image: "https://picsum.photos/400/300?random=4",
     price: "Rp130.000.000",
     fuelType: "Bensin",
@@ -209,7 +209,7 @@ export const carsData = [
     ],
     interior: ["Socket Aksesoris", "Saku Pintu", "Sandaran Kepala Depan", "Sandaran Kepala Belakang", "Kaca Spion Dalam", "Jok Kulit", "Kursi Belakang Lipat", "Roda Kemudi"],
     exterior: ["Spion Otomatis", "Kaca Jendela Otomatis", "Electric Sunroof", "Lampu Kabut", "Gril Krom", "Spoiler Samping", "Muller Cutter", "Lampu Sein"],
-    fasilitas: ["Kontrol Perjaianan", "Power Steering", "Navigasi GPS", "Central Lock", "Child Lock", "Alarm", "Airbag Pengemudi", "Speaker"], 
+    fasilitas: ["Kontrol Perjaianan", "Power Steering", "Navigasi GPS", "Central Lock", "Child Lock", "Alarm", "Airbag Pengemudi", "Speaker"],
     whistlist: 12,
     views: 290
   },

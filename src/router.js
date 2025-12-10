@@ -6,40 +6,22 @@ import CarDetailPage, { mount as carDetailMount } from "./pages/car-detail.js";
 import NewsPage, { mount as newsMount } from "./pages/news.js";
 import ContactPage, { mount as contactMount } from "./pages/contact.js";
 import ContactAdminPage, { mount as contactAdminMount } from "./pages/contact-admin.js";
-import LoginPage from "./pages/login.js";
-import RegisterPage from "./pages/register.js";
+import LoginPage, { mount as loginMount } from "./pages/login.js";
+import RegisterPage, { mount as registerMount } from "./pages/register.js";
 import ForgotPasswordPage from "./pages/forgot-password.js";
 import MitraLoginPage from "./pages/mitra-login.js";
 import MitraRegisterPage from "./pages/mitra-register.js";
-import AdminBrandPage, { mountAdminBrandPage } from "./pages/admin-brand.js";
+import TestDrivePage, { mount as testDriveMount } from "./pages/test-drive.js";
+import AdminDashboardPage, { mount as adminDashboardMount } from "./pages/admin-dashboard.js";
+import AdminLoginPage, { mount as adminLoginMount } from "./pages/admin-login.js";
+import AdminUsersPage, { mount as adminUsersMount } from "./pages/admin-users.js";
+import AdminTestDrivePage, { mount as adminTestDriveMount } from "./pages/admin-testdrive.js";
+import AdminChangePasswordPage, { mount as adminChangePasswordMount } from "./pages/admin-change-password.js";
 
 let currentUnmount = null;
 
-const protectedPages = [
-  "home",
-  "brand-catalog-admin",
-  "contact-admin",
-  "dashboard",
-  "admin",              // future
-];
-
 export default function router() {
   const page = window.location.hash.replace("#", "") || "home";
-
-  const token = localStorage.getItem("token");
-
-  // 🚨 If route is protected & user not logged in → redirect to login
-  if (protectedPages.includes(page) && !token) {
-    window.location.hash = "#login";
-    return;
-  }
-
-  // 🚨 If already logged in, prevent access to login/register
-  const authPages = ["login", "register", "forgot-password", "mitra-login", "mitra-register"];
-  if (authPages.includes(page) && token) {
-    window.location.hash = "#home"; // or "#dashboard"
-    return;
-  }
 
   const content = document.getElementById("page-content");
 
@@ -47,7 +29,7 @@ export default function router() {
   try {
     if (typeof currentUnmount === "function") currentUnmount();
   } catch (e) {
-    console.error("Unmount error:", e);
+    // Silent fail on unmount errors
   }
 
   const routes = {
@@ -59,12 +41,17 @@ export default function router() {
     news: { view: NewsPage, mount: newsMount },
     contact: { view: ContactPage, mount: contactMount },
     "contact-admin": { view: ContactAdminPage, mount: contactAdminMount },
-    "login": { view: LoginPage },
-    "register": { view: RegisterPage },
+    "login": { view: LoginPage, mount: loginMount },
+    "register": { view: RegisterPage, mount: registerMount },
     "forgot-password": { view: ForgotPasswordPage },
     "mitra-login": { view: MitraLoginPage },
     "mitra-register": { view: MitraRegisterPage },
-    "admin-brand": { view: AdminBrandPage, mount: mountAdminBrandPage },
+    "test-drive": { view: TestDrivePage, mount: testDriveMount },
+    "admin-dashboard": { view: AdminDashboardPage, mount: adminDashboardMount },
+    "admin-login": { view: AdminLoginPage, mount: adminLoginMount },
+    "admin-users": { view: AdminUsersPage, mount: adminUsersMount },
+    "admin-testdrive": { view: AdminTestDrivePage, mount: adminTestDriveMount },
+    "admin-change-password": { view: AdminChangePasswordPage, mount: adminChangePasswordMount },
   };
 
   const route = routes[page] || routes.home;

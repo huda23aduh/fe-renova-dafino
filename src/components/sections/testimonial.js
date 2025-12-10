@@ -24,7 +24,7 @@ export default function Testimonial() {
           <div class="swiper testimonial-swiper select-none overflow-visible" style="cursor: grab;">
           <div class="swiper-wrapper">
             ${testimonialsData.map(testimonial => `
-              <div class="swiper-slide h-auto px-3 sm:px-4 md:px-5 overflow-visible">
+              <div class="swiper-slide h-auto px-3 sm:px-4 md:px-5 overflow-visible testimonial-mobile-card">
                 <!-- Card Container with positioning context -->
                 <div class="relative py-6 sm:py-12 md:py-20">
                   <!-- Yellow Background Card (rotated left) -->
@@ -34,7 +34,7 @@ export default function Testimonial() {
                   <div class="relative z-10 bg-[#14213D] rounded-3xl p-6 sm:p-10 md:p-16 w-full flex flex-col items-center justify-start md:justify-between shadow-lg">
                     <!-- Profile Image Container (overlaps top) -->
                     <div class="testimonial-profile-img absolute left-1/2 transform -translate-x-1/2 z-30" style="top: -32px;">
-                      <img src="${testimonial.image}" alt="${testimonial.name}" class="w-16 h-16 sm:w-20 sm:h-20 md:w-40 md:h-40 rounded-full object-cover" />
+                      <img src="${testimonial.image}" alt="${testimonial.name}" class="w-16 h-16 sm:w-20 sm:h-20 md:w-40 md:h-40 rounded-full object-cover responsive-image" />
                     </div>
 
                     <!-- Content (with padding-top for profile) -->
@@ -53,7 +53,7 @@ export default function Testimonial() {
                       </div>
 
                       <!-- Testimonial Text -->
-                      <p class="text-xs sm:text-base md:text-lg text-gray-200 leading-relaxed line-clamp-3 sm:line-clamp-4 md:line-clamp-4 mb-3 sm:mb-4">
+                      <p class="text-xs sm:text-base md:text-lg text-gray-200 leading-relaxed line-clamp-3 sm:line-clamp-4 md:line-clamp-4 mb-3 sm:mb-4 responsive-text">
                         ${testimonial.text}
                       </p>
                     </div>

@@ -59,9 +59,9 @@ export default function Catalog() {
             <!-- Scrollable Container untuk Grid (hidden scrollbar) -->
             <div id="catalog-scroll-container" class="max-h-[1200px] overflow-y-auto pr-2 scrollbar-hide">
             <!-- Grid Container -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8" id="cars-grid">
-                ${renderCars(initialCars)}
-              </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 catalog-mobile-grid" id="cars-grid">
+              ${renderCars(initialCars)}
+            </div>
 
               <!-- Sentinel untuk infinite scroll -->
               <div id="scroll-sentinel" class="py-8 text-center text-gray-500 text-sm"></div>
@@ -76,10 +76,10 @@ export default function Catalog() {
 
 function renderCars(cars) {
   return cars.map(car => `
-    <div class="bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden group relative border-2 border-[#FFB703]">
+    <div class="bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden group relative border-2 border-[#FFB703] car-card" data-car-id="${car.id}">
       <!-- Image Container -->
       <div class="relative overflow-hidden bg-gray-200 h-40 sm:h-48 md:h-56">
-        <img src="${car.image}" alt="${car.brand}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+        <img src="${car.image}" alt="${car.brand}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 responsive-image" />
       </div>
 
       <!-- Content -->
@@ -102,7 +102,9 @@ function renderCars(cars) {
               ${car.description}
             </p>
             <div class="flex items-center gap-0.5 sm:gap-1">
-              <i class="fa-regular fa-heart text-white text-sm sm:text-lg"></i>
+              <button class="catalog-favorite-btn hover:scale-110 transition" data-car-id="${car.id}" title="Tambah ke Favorit">
+                <i class="fa-regular fa-heart text-white text-sm sm:text-lg catalog-heart-icon"></i>
+              </button>
               <span class="text-xs font-bold text-white">${car.whistlist}</span>
             </div>
           </div>
@@ -111,7 +113,7 @@ function renderCars(cars) {
             <p class="text-sm sm:text-base md:text-lg font-bold text-[#FFB703]">
               ${car.price}
             </p>
-            <button class="px-3 sm:px-4 py-1 sm:py-2 font-semibold bg-transparent text-xs sm:text-sm transition-all duration-300 hover:opacity-90 whitespace-nowrap text-white cursor-pointer relative pb-0.5 sm:pb-1 hover:border-b-2 hover:border-white">
+            <button class="catalog-detail-btn px-3 sm:px-4 py-1 sm:py-2 font-semibold bg-transparent text-xs sm:text-sm transition-all duration-300 hover:opacity-90 whitespace-nowrap text-white cursor-pointer relative pb-0.5 sm:pb-1 hover:border-b-2 hover:border-white" data-car-id="${car.id}">
               Detail
             </button>
           </div>
@@ -169,8 +171,136 @@ export function mount() {
       scrollContainer.scrollTop = 0;
       currentIndex = itemsPerLoad;
       grid.innerHTML = renderCars(filteredData.slice(0, itemsPerLoad));
+      
+      // Re-attach detail button listeners
+      attachDetailListeners();
     });
   });
+
+  // Detail button click handler
+  function attachDetailListeners() {
+    document.querySelectorAll('.catalog-detail-btn').forEach(btn => {
+      // Remove existing listeners first to avoid duplicates
+      btn.removeEventListener('click', handleDetailClick);
+      
+      // Add new listener
+      btn.addEventListener('click', handleDetailClick);
+      
+      // Add visual feedback for debugging
+      btn.style.pointerEvents = 'auto';
+      btn.style.zIndex = '10';
+    });
+  }
+
+  // Separate function for detail click handling
+  function handleDetailClick(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    const carId = e.currentTarget.dataset.carId;
+    console.log('Detail button clicked for car ID:', carId);
+    
+    if (carId) {
+      sessionStorage.setItem('selectedCarId', carId);
+      
+      // Add loading state
+      e.currentTarget.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+      e.currentTarget.disabled = true;
+      
+      // Navigate to detail page
+      window.location.hash = '#car-detail';
+      
+      // Reset button after navigation (in case page doesn't reload)
+      setTimeout(() => {
+        e.currentTarget.innerHTML = 'Detail';
+        e.currentTarget.disabled = false;
+      }, 1000);
+    }
+  }
+
+  // Card click handler for entire card click
+  function handleCardClick(e) {
+    // Don't trigger if clicking on favorite button or detail button
+    if (e.target.closest('.catalog-favorite-btn') || e.target.closest('.catalog-detail-btn')) {
+      return;
+    }
+    
+    const carCard = e.currentTarget;
+    const carId = carCard.dataset.carId;
+    console.log('Card clicked for car ID:', carId);
+    
+    if (carId) {
+      sessionStorage.setItem('selectedCarId', carId);
+      window.location.hash = '#car-detail';
+    }
+  }
+
+  // Attach card click listeners
+  function attachCardListeners() {
+    const carCards = document.querySelectorAll('.car-card');
+    carCards.forEach(card => {
+      // Remove existing listeners first to avoid duplicates
+      card.removeEventListener('click', handleCardClick);
+      
+      // Add new listener
+      card.addEventListener('click', handleCardClick);
+      
+      // Add visual feedback for debugging
+      card.style.cursor = 'pointer';
+    });
+  }
+
+  // Favorite button click handler
+  function attachFavoriteListeners() {
+    const favoriteButtons = document.querySelectorAll('.catalog-favorite-btn');
+    
+    // Initialize heart icons based on localStorage
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    favoriteButtons.forEach(btn => {
+      const carId = btn.dataset.carId;
+      const heartIcon = btn.querySelector('.catalog-heart-icon');
+      if (favorites.includes(carId.toString())) {
+        heartIcon.classList.remove('far');
+        heartIcon.classList.add('fas');
+        heartIcon.style.color = '#FFB703';
+      }
+    });
+
+    favoriteButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const carId = btn.dataset.carId;
+        const heartIcon = btn.querySelector('.catalog-heart-icon');
+        let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+        
+        if (favorites.includes(carId.toString())) {
+          // Remove from favorites
+          favorites = favorites.filter(id => id !== carId.toString());
+          heartIcon.classList.remove('fas');
+          heartIcon.classList.add('far');
+          heartIcon.style.color = 'white';
+        } else {
+          // Add to favorites
+          favorites.push(carId.toString());
+          heartIcon.classList.remove('far');
+          heartIcon.classList.add('fas');
+          heartIcon.style.color = '#FFB703';
+        }
+        
+        localStorage.setItem('favorites', JSON.stringify(favorites));
+        
+        // Update navbar favorite count
+        if (window.updateFavoriteCount) {
+          window.updateFavoriteCount();
+        }
+      });
+    });
+  }
+
+  // Initial attach
+  attachDetailListeners();
+  attachFavoriteListeners();
+  attachCardListeners();
 
   // Disconnect observer lama jika ada
   if (observer) {
@@ -187,6 +317,13 @@ export function mount() {
           const newHTML = renderCars(nextCars);
           grid.insertAdjacentHTML('beforeend', newHTML);
           currentIndex += itemsPerLoad;
+          
+          // Re-attach detail button listeners for new items
+          attachDetailListeners();
+          // Re-attach favorite button listeners for new items
+          attachFavoriteListeners();
+          // Re-attach card click listeners for new items
+          attachCardListeners();
         }
       }
     });

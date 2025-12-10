@@ -145,18 +145,47 @@ export function mount() {
     });
   });
 
-  // Love button interaksi
+  // Love button interaksi - save to localStorage
   const loveButtons = document.querySelectorAll('.car-love-btn');
+  
+  // Initialize heart icons based on localStorage
+  const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+  loveButtons.forEach(btn => {
+    const carId = btn.dataset.carId;
+    const heartIcon = btn.querySelector('i');
+    if (favorites.includes(carId)) {
+      heartIcon.classList.remove('far');
+      heartIcon.classList.add('fas');
+      btn.style.color = '#d32f2f';
+    }
+  });
+
   loveButtons.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      const carId = btn.dataset.carId;
       const heartIcon = btn.querySelector('i');
-      heartIcon.classList.toggle('fas');
-      heartIcon.classList.toggle('far');
-      if (heartIcon.classList.contains('fas')) {
-        btn.style.color = '#d32f2f';
-      } else {
+      let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      
+      if (favorites.includes(carId)) {
+        // Remove from favorites
+        favorites = favorites.filter(id => id !== carId);
+        heartIcon.classList.remove('fas');
+        heartIcon.classList.add('far');
         btn.style.color = 'inherit';
+      } else {
+        // Add to favorites
+        favorites.push(carId);
+        heartIcon.classList.remove('far');
+        heartIcon.classList.add('fas');
+        btn.style.color = '#d32f2f';
+      }
+      
+      localStorage.setItem('favorites', JSON.stringify(favorites));
+      
+      // Update navbar favorite count
+      if (window.updateFavoriteCount) {
+        window.updateFavoriteCount();
       }
     });
   });

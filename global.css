@@ -75,9 +75,80 @@
     margin-left: -25px !important;
     height: 70% !important;
   }
-  
+
   /* Profile image positioning for desktop */
   .testimonial-profile-img {
     top: -70px !important;
   }
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 767px) {
+  /* Navbar mobile improvements */
+  .mobile-nav-padding {
+    padding: 0 1rem !important;
+  }
+
+  /* Hero section mobile */
+  .hero-mobile-text {
+    font-size: 1.5rem !important;
+  }
+
+  /* Catalog section mobile */
+  .catalog-mobile-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Testimonial mobile */
+  .testimonial-mobile-card {
+    margin: 0 1rem !important;
+  }
+
+  /* Footer mobile */
+  .footer-mobile-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+
+  /* Button sizes for mobile */
+  .btn-mobile {
+    padding: 0.5rem 1rem !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+/* Tablet responsive improvements */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Navbar tablet */
+  .tablet-nav-padding {
+    padding: 0 2rem !important;
+  }
+
+  /* Hero section tablet */
+  .hero-tablet-text {
+    font-size: 2rem !important;
+  }
+
+  /* Catalog section tablet */
+  .catalog-tablet-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* General responsive improvements */
+.responsive-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.responsive-image {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.responsive-text {
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  line-height: 1.5;
 }

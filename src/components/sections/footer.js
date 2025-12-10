@@ -9,13 +9,13 @@ export default function Footer() {
       <!-- Footer Content -->
       <div class="px-4 md:px-8 py-12">
         <div class="max-w-8xl mx-auto">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12 footer-mobile-grid">
             <!-- Brand -->
             <div>
               <h2 class="text-4xl font-bold mb-4 text-white">
                 Renova Mobil
               </h2>
-              <p class="text-lg text-white">
+              <p class="text-lg text-white responsive-text">
                 Renova merupakan platform jual beli mobil dengan tiga layanan utama yaitu jual, beli dan tukar tambah dan bisa diakses secara daring atau menghubungi dealer terdekat.
               </p>
             </div>

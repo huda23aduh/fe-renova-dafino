@@ -4,17 +4,17 @@ export default function Hero() {
       <div class="pb-8 sm:pb-10 pt-12 sm:pt-20 px-4 sm:px-6 md:px-8 lg:px-32 flex items-center justify-center min-h-auto lg:min-h-96 flex-col lg:flex-row gap-4 sm:gap-6 md:gap-8 lg:gap-16 max-w-8xl mx-auto">
         <!-- Left Text Content -->
         <div class="flex-1 text-center lg:text-left">
-          <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-2 sm:mb-3 md:mb-3 lg:mb-2 text-[#FFB703] leading-tight">
+          <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-2 sm:mb-3 md:mb-3 lg:mb-2 text-[#FFB703] leading-tight responsive-text">
             SELAMAT DATANG DI<br />RENOVA MOBIL
           </h1>
-          <p class="text-[#FFB703] text-xs md:text-base lg:text-lg font-semibold mb-3 sm:mb-4 md:mb-6 lg:mb-8">
+          <p class="text-[#FFB703] text-xs md:text-base lg:text-lg font-semibold mb-3 sm:mb-4 md:mb-6 lg:mb-8 responsive-text">
             kami memiliki jenis mobil yang anda butuhkan
           </p>
         </div>
 
         <!-- Right Car Image -->
         <div class="flex justify-center w-full lg:flex-1">
-          <img src="/images/car_hero.png" alt="Renova Car" class="w-4/5 sm:w-3/4 md:w-3/5 lg:w-full max-w-xs sm:max-w-sm md:max-w-lg lg:max-w-3xl object-contain drop-shadow-2xl" />
+          <img src="/images/car_hero.png" alt="Renova Car" class="w-4/5 sm:w-3/4 md:w-3/5 lg:w-full max-w-xs sm:max-w-sm md:max-w-lg lg:max-w-3xl object-contain drop-shadow-2xl responsive-image" />
         </div>
       </div>
 

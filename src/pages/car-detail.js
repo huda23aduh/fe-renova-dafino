@@ -270,6 +270,9 @@ export default function CarDetail() {
 }
 
 export function mount() {
+  // Auto scroll to top when page loads
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
   // Initialize Swiper Gallery - 3 slides visible
   const swiper = new Swiper('.gallery-swiper', {
     loop: true,
@@ -305,55 +308,117 @@ export function mount() {
     }
   });
 
-  // Share button
+  // Enhanced Share button functionality
   document.querySelectorAll('.car-share-detail').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const carId = btn.dataset.carId;
-      const shareText = `Lihat mobil pilihan saya di Renova Mobil! Car ID: ${carId}`;
+      const car = carsData.find(c => c.id === parseInt(carId));
+      const carName = car ? car.brand : 'Mobil';
+      const carPrice = car ? car.price : 'Harga Hubungi Kami';
+      
+      const shareText = `Lihat mobil pilihan saya di Renova Mobil!\n\n🚗 ${carName}\n💰 ${carPrice}\n\nKunjungi showroom kami untuk info lebih lanjut!`;
+      const shareUrl = `${window.location.origin}${window.location.pathname}#car-detail`;
+      
+      // Visual feedback for share button
+      const originalColor = btn.style.color;
+      btn.style.color = '#FFB703';
+      setTimeout(() => {
+        btn.style.color = originalColor;
+      }, 300);
       
       if (navigator.share) {
         navigator.share({
-          title: 'Renova Mobil',
-          text: shareText
-        }).catch(err => {});
+          title: `Mobil ${carName} - Renova Mobil`,
+          text: shareText,
+          url: shareUrl
+        }).catch(err => {
+          console.log('Share cancelled or failed:', err);
+        });
       } else {
-        navigator.clipboard.writeText(shareText).then(() => {
-          // Success: link copied silently
+        // Fallback: copy to clipboard
+        const fullShareText = `${shareText}\n\n🔗 ${shareUrl}`;
+        navigator.clipboard.writeText(fullShareText).then(() => {
+          // Show success feedback
+          btn.innerHTML = '<i class="fas fa-check"></i>';
+          setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-share-alt"></i>';
+          }, 1000);
+        }).catch(err => {
+          console.log('Clipboard write failed:', err);
+          // Manual fallback
+          alert('Copy link ini:\n\n' + fullShareText);
         });
       }
     });
   });
 
-  // Like button
-  document.querySelectorAll('.car-like-detail').forEach(btn => {
+  // Favorite button functionality
+  const favoriteButtons = document.querySelectorAll('.car-like-detail');
+  
+  // Initialize heart icons based on localStorage
+  const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+  favoriteButtons.forEach(btn => {
+    const carId = btn.dataset.carId;
+    const heartIcon = btn.querySelector('i');
+    if (favorites.includes(carId.toString())) {
+      heartIcon.classList.remove('far');
+      heartIcon.classList.add('fas');
+      btn.style.color = '#3B82F6';
+    }
+  });
+
+  favoriteButtons.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      btn.classList.toggle('liked');
-      const icon = btn.querySelector('i');
-      icon.classList.toggle('far');
-      icon.classList.toggle('fas');
-      if (icon.classList.contains('fas')) {
-        btn.style.color = '#d32f2f';
+      const carId = btn.dataset.carId;
+      const heartIcon = btn.querySelector('i');
+      let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      
+      if (favorites.includes(carId.toString())) {
+        // Remove from favorites
+        favorites = favorites.filter(id => id !== carId.toString());
+        heartIcon.classList.remove('fas');
+        heartIcon.classList.add('far');
+        heartIcon.style.color = 'inherit';
       } else {
-        btn.style.color = 'inherit';
+        // Add to favorites
+        favorites.push(carId.toString());
+        heartIcon.classList.remove('far');
+        heartIcon.classList.add('fas');
+        heartIcon.style.color = '#3B82F6';
+      }
+      
+      localStorage.setItem('favorites', JSON.stringify(favorites));
+      
+      // Update navbar favorite count
+      if (window.updateFavoriteCount) {
+        window.updateFavoriteCount();
       }
     });
   });
 
-  // Chat button
+  // Chat button - open WhatsApp
   document.querySelectorAll('.car-chat-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      // Chat feature placeholder
+      const carId = sessionStorage.getItem('selectedCarId');
+      const car = carsData.find(c => c.id === parseInt(carId));
+      const carName = car ? car.brand : 'Mobil';
+      const carPrice = car ? car.price : '';
+      
+      const phoneNumber = '6281234567890'; // Ganti dengan nomor WA bisnis
+      const message = encodeURIComponent(`Halo, saya tertarik dengan mobil:\n\n*${carName}*\nHarga: ${carPrice}\n\nMohon informasi lebih lanjut.`);
+      
+      window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
     });
   });
 
-  // Test Drive button
+  // Test Drive button - navigate to test drive form
   document.querySelectorAll('.car-testdrive-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      // Test Drive feature placeholder
+      window.location.hash = '#test-drive';
     });
   });
 
