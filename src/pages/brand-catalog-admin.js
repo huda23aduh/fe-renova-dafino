@@ -1,14 +1,177 @@
-import { carsData, brandsData } from "../data/mockData.js";
+import config from '../config/config.js';
 import AdminSidebar, { mount as adminSidebarMount } from "../components/sections/admin-sidebar.js";
 
+// API Configuration
+const CARS_API_URL = config.CARS_API_URL;
+const BRANDS_API_URL = config.BRANDS_API_URL;
+
 // STATE
-let adminCurrentBrand = "TOYOTA";
-let adminSelectedCarImage = `/images/${adminCurrentBrand.toLowerCase()}_car.png`; // State for the big car image
+let adminCurrentBrand = "SUZUKI"; // Changed from TOYOTA to match your car's brand
+let adminSelectedCarImage = `/images/${adminCurrentBrand.toLowerCase()}_car.png`;
 let adminIsEditing = false;
 let adminEditingCarId = null;
+let carsData = []; // Will be loaded from API
+let brandsDataFromAPI = []; // Will be loaded from API
+let isLoading = false;
+
+// Temporary mock brands data (fallback if API fails)
+const mockBrandsData = [
+  { id: 'brand-1', name: 'TOYOTA', image: '/images/toyota.png' },
+  { id: 'brand-2', name: 'HONDA', image: '/images/honda.png' },
+  { id: 'brand-3', name: 'DAIHATSU', image: '/images/daihatsu.png' },
+  { id: 'brand-4', name: 'SUZUKI', image: '/images/suzuki.png' },
+  { id: 'brand-5', name: 'MITSUBISHI', image: '/images/mitsubishi.png' },
+];
+
+// Helper function to parse JSON fields
+// Helper function to parse JSON fields - FIXED VERSION
+function parseJsonField(field) {
+  if (!field) return [];
+  if (Array.isArray(field)) return field;
+
+  try {
+    // First, try to clean up malformed JSON with extra quotes
+    let cleanedField = field;
+
+    // Remove extra quotes (like """[]""")
+    if (typeof cleanedField === 'string') {
+      // Remove triple quotes
+      cleanedField = cleanedField.replace(/^\"\"\"/, '').replace(/\"\"\"$/, '');
+      // Remove double quotes if still present
+      cleanedField = cleanedField.replace(/^\"|\"$/g, '');
+      // Unescape escaped quotes
+      cleanedField = cleanedField.replace(/\\\"/g, '"');
+    }
+
+    // Now try to parse
+    const parsed = JSON.parse(cleanedField);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch (e) {
+    console.error('Error parsing JSON field:', e, 'Original field:', field);
+    // Try a fallback: extract array-like content
+    if (typeof field === 'string') {
+      // Try to extract array content from malformed string
+      const arrayMatch = field.match(/\[(.*?)\]/);
+      if (arrayMatch) {
+        const content = arrayMatch[1];
+        if (content.trim() === '') return [];
+        // Split by comma and clean up
+        return content.split(',').map(item => {
+          // Remove quotes and extra spaces
+          return item.replace(/[\"\\]/g, '').trim();
+        }).filter(item => item !== '');
+      }
+    }
+    return [];
+  }
+}
+
+// Helper function to get available brands
+function getAvailableBrands() {
+  if (brandsDataFromAPI && brandsDataFromAPI.length > 0) {
+    // Map API brands to expected format
+    return brandsDataFromAPI.map(brand => ({
+      id: brand.id,
+      name: brand.brand_name || brand.name || 'Unknown',
+      image: brand.image || `/images/${(brand.brand_name || brand.name || 'unknown').toLowerCase()}.png`
+    }));
+  }
+  // Use mock data if API returns nothing
+  console.log('Using mock brands data');
+  return mockBrandsData;
+}
+
+// Helper function to get brand name from car
+function getBrandName(car) {
+  if (!car) return 'N/A';
+
+  // Check if car has brand data
+  if (car.brand) {
+    return car.brand.brand_name || car.brand.name || 'N/A';
+  }
+
+  // If no brand object, try to get brand from API response structure
+  if (car.Brand) {
+    return car.Brand.brand_name || car.Brand.name || 'N/A';
+  }
+
+  return 'N/A';
+}
+
+// Function to load data from API
+async function loadData() {
+  try {
+    isLoading = true;
+    console.log('=== Loading Data ===');
+
+    // Load cars data
+    console.log('Loading cars from:', CARS_API_URL);
+    const carsResponse = await fetch(CARS_API_URL);
+    console.log('Cars response status:', carsResponse.status);
+
+    if (carsResponse.ok) {
+      const carsResult = await carsResponse.json();
+      console.log('Cars API response structure:', carsResult);
+
+      if (carsResult && carsResult.success) {
+        // Parse JSON fields in each car
+        carsData = (carsResult.data || []).map(car => ({
+          ...car,
+          gallery: parseJsonField(car.gallery),
+          interior: parseJsonField(car.interior),
+          exterior: parseJsonField(car.exterior),
+          features: parseJsonField(car.features)
+        }));
+        console.log(`Loaded ${carsData.length} cars`);
+        console.log('First car:', carsData[0]);
+      }
+    } else {
+      console.error('Cars API error status:', carsResponse.status);
+    }
+
+    // Load brands data
+    console.log('\nLoading brands from:', BRANDS_API_URL);
+    try {
+      const brandsResponse = await fetch(BRANDS_API_URL);
+      console.log('Brands response status:', brandsResponse.status);
+
+      if (brandsResponse.ok) {
+        const brandsResult = await brandsResponse.json();
+        console.log('Brands API response:', brandsResult);
+
+        // Handle different response formats
+        if (brandsResult && Array.isArray(brandsResult)) {
+          brandsDataFromAPI = brandsResult;
+        } else if (brandsResult && brandsResult.success && Array.isArray(brandsResult.data)) {
+          brandsDataFromAPI = brandsResult.data;
+        } else if (brandsResult && brandsResult.data) {
+          brandsDataFromAPI = Array.isArray(brandsResult.data) ? brandsResult.data : [];
+        } else {
+          brandsDataFromAPI = [];
+        }
+
+        console.log(`Loaded ${brandsDataFromAPI.length} brands from API`);
+      } else {
+        console.error('Brands API error status:', brandsResponse.status);
+        brandsDataFromAPI = [];
+      }
+    } catch (brandsError) {
+      console.error('Error fetching brands:', brandsError);
+      brandsDataFromAPI = [];
+    }
+
+    console.log('=== Finished Loading Data ===');
+  } catch (error) {
+    console.error('Error loading data:', error);
+    window.showToast("Gagal memuat data dari server", "error");
+  } finally {
+    isLoading = false;
+  }
+}
 
 // Function to re-render the component
-function rerender() {
+async function rerender() {
+  await loadData();
   const container = document.getElementById('app');
   container.innerHTML = BrandCatalogAdminPage();
   mount();
@@ -16,9 +179,14 @@ function rerender() {
 
 // COMPONENT
 export default function BrandCatalogAdminPage() {
-  const brandCars = carsData.filter((car) =>
-    car.brand.toUpperCase().includes(adminCurrentBrand.toUpperCase())
-  );
+  // Filter cars for current brand
+  const brandCars = carsData.filter((car) => {
+    const brandName = getBrandName(car);
+    console.log(`Filtering: Car brand="${brandName}", Current brand="${adminCurrentBrand}"`);
+    const matches = brandName.toUpperCase() === adminCurrentBrand.toUpperCase();
+    console.log(`  Matches: ${matches}`);
+    return matches;
+  });
 
   // Show total cars for current brand and all cars
   const totalBrandCars = brandCars.length;
@@ -45,69 +213,86 @@ export default function BrandCatalogAdminPage() {
                 </button>
             </div>
 
-        <!-- Brand Icons Horizontal -->
-        <div class="flex gap-2 md:gap-4 mb-4 md:mb-6 overflow-x-auto pb-2 scrollbar-hide">
-          ${brandsData
-            .map(
-              (b) => `
-            <button class="admin-brand-filter-btn shrink-0 flex flex-col items-center gap-1 cursor-pointer" data-brand="${b.name}">
-              <div class="w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg"
-                style="background: ${
-                  b.name === adminCurrentBrand
-                    ? "linear-gradient(45deg, #FFB703 0%, #FFA500 100%)"
-                    : "linear-gradient(45deg, #FFB703 0%, #14213D 50%, #FFB703 100%)"
-                };">
-                <img src="${b.image}" class="w-6 h-6 md:w-8 md:h-8 object-contain"
-                     style="filter: ${
-                       b.name === adminCurrentBrand
-                         ? "brightness(0)"
-                         : "brightness(1)"
-                     };">
+            <!-- Loading Indicator -->
+            ${isLoading ? `
+              <div class="flex items-center justify-center my-4">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
+                <span class="ml-2 text-yellow-400">Memuat data...</span>
               </div>
-            </button>
-          `
-            )
-            .join("")}
-        </div>
+            ` : ''}
 
-        <!-- Brand Title -->
-        <h1 class="text-4xl md:text-6xl lg:text-8xl font-black bg-linear-to-b from-[#FFB703] to-transparent bg-clip-text text-transparent tracking-tight leading-none md:-mb-6 lg:-mb-10">
-          ${adminCurrentBrand}
-        </h1>
+            <!-- Debug Info (remove in production) -->
+            <div class="text-xs text-gray-400 mb-2">
+              Total cars in DB: ${carsData.length}, Filtered for ${adminCurrentBrand}: ${brandCars.length}
+              ${carsData.length > 0 ? `<br>First car brand: ${getBrandName(carsData[0])}` : ''}
+            </div>
 
-        <!-- Big Car Image -->
-        <div class="relative w-full h-[180px] md:h-[280px] lg:h-[380px] flex items-center justify-center">
-          <img src="${adminSelectedCarImage}" class="h-full w-auto drop-shadow-2xl transition-all duration-300">
-        </div>
+            <!-- Brand Icons Horizontal -->
+            <div class="flex gap-2 md:gap-4 mb-4 md:mb-6 overflow-x-auto pb-2 scrollbar-hide">
+              ${getAvailableBrands()
+      .map(
+        (b) => `
+                <button class="admin-brand-filter-btn shrink-0 flex flex-col items-center gap-1 cursor-pointer" 
+                        data-brand="${b.name}">
+                  <div class="w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg"
+                    style="background: ${b.name.toUpperCase() === adminCurrentBrand.toUpperCase()
+            ? "linear-gradient(45deg, #FFB703 0%, #FFA500 100%)"
+            : "linear-gradient(45deg, #FFB703 0%, #14213D 50%, #FFB703 100%)"
+          };">
+                    <img src="${b.image}" 
+                         class="w-6 h-6 md:w-8 md:h-8 object-contain"
+                         style="filter: ${b.name.toUpperCase() === adminCurrentBrand.toUpperCase()
+            ? "brightness(0)"
+            : "brightness(1)"
+          };" 
+                        onerror="this.src='/images/car-default.png'">
+                  </div>
+                  <span class="text-xs mt-1">${b.name}</span>
+                </button>
+              `
+      )
+      .join("")}
+            </div>
 
-        <!-- Total Mobil + Admin Buttons -->
-        <div class="mt-4 md:mt-6 flex flex-col gap-3 items-center w-full">
-          <div class="rounded-xl p-3 md:p-5 text-center"
-               style="background: linear-gradient(150deg, #FFB703 0%, #14213D 50%, #FFB703 100%);">
-            <p class="text-2xl md:text-4xl font-bold">${totalBrandCars}</p>
-            <p class="text-xs md:text-sm font-bold mt-1">MOBIL ${adminCurrentBrand}</p>
+            <!-- Brand Title -->
+            <h1 class="text-4xl md:text-6xl lg:text-8xl font-black bg-linear-to-b from-[#FFB703] to-transparent bg-clip-text text-transparent tracking-tight leading-none md:-mb-6 lg:-mb-10">
+              ${adminCurrentBrand}
+            </h1>
+
+            <!-- Big Car Image -->
+            <div class="relative w-full h-[180px] md:h-[280px] lg:h-[380px] flex items-center justify-center">
+              <img src="${adminSelectedCarImage}" class="h-full w-auto drop-shadow-2xl transition-all duration-300" 
+                   onerror="this.src='https://picsum.photos/400/300?random=1'">
+            </div>
+
+            <!-- Total Mobil + Admin Buttons -->
+            <div class="mt-4 md:mt-6 flex flex-col gap-3 items-center w-full">
+              <div class="rounded-xl p-3 md:p-5 text-center"
+                   style="background: linear-gradient(150deg, #FFB703 0%, #14213D 50%, #FFB703 100%);">
+                <p class="text-2xl md:text-4xl font-bold">${totalBrandCars}</p>
+                <p class="text-xs md:text-sm font-bold mt-1">MOBIL ${adminCurrentBrand}</p>
+              </div>
+
+              <div class="flex gap-3">
+                <button id="admin-toggle-form-btn"
+                  class="px-5 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-semibold shadow-lg flex items-center gap-2 text-sm md:text-base">
+                  <i class="fa-solid fa-car-side"></i>
+                  ${adminIsEditing ? "Batal/Kembali" : "Tambah Mobil"}
+                </button>
+              </div>
+            </div>
+
           </div>
 
-          <div class="flex gap-3">
-            <button id="admin-toggle-form-btn"
-              class="px-5 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-semibold shadow-lg flex items-center gap-2 text-sm md:text-base">
-              <i class="fa-solid fa-car-side"></i>
-              ${adminIsEditing ? "Batal/Kembali" : "Tambah Mobil"}
-            </button>
+          <!-- YELLOW DIVIDER -->
+          <div class="hidden lg:block absolute left-1/2 top-0 w-[3px] bg-[#FFB703] h-full transform -translate-x-1/2"></div>
+
+          <!-- RIGHT SIDE (List or Detail Form) -->
+          <div class="flex flex-col lg:pl-10 relative px-0 md:px-4">
+            ${adminIsEditing ? renderAdminDetailForm(editingCar) : renderAdminList(brandCars)}
           </div>
         </div>
-
-      </div>
-
-      <!-- YELLOW DIVIDER -->
-      <div class="hidden lg:block absolute left-1/2 top-0 w-[3px] bg-[#FFB703] h-full transform -translate-x-1/2"></div>
-
-      <!-- RIGHT SIDE (List or Detail Form) -->
-      <div class="flex flex-col lg:pl-10 relative px-0 md:px-4">
-        ${adminIsEditing ? renderAdminDetailForm(editingCar) : renderAdminList(brandCars)}
-      </div>
-    </div>
-  </section>
+      </section>
     </main>
   </div>
   `;
@@ -121,58 +306,82 @@ function renderAdminList(cars) {
     </div>
 
     <div class="max-h-[520px] md:max-h-[640px] overflow-y-auto pr-2 md:pr-4 scrollbar-hide">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-        ${
-          cars.length
-            ? cars
-                .map(
-                  (car) => `
-          <div class="admin-car-item bg-white rounded-lg shadow-lg overflow-hidden border-2 border-[#FFB703] cursor-pointer" data-image="${car.image}">
-            <div class="h-28 md:h-40 bg-gray-200 overflow-hidden relative">
-              <img src="${car.image}" class="w-full h-full object-cover">
-              ${car.images && car.images.length > 1 ? `
-                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                  <i class="fa-solid fa-images"></i>
-                  ${car.images.length}
+      ${cars.length === 0 ? `
+        <div class="text-center py-8">
+          <i class="fa-solid fa-car text-gray-400 text-4xl mb-2"></i>
+          <p class="text-gray-300">Belum ada mobil untuk brand ${adminCurrentBrand}.</p>
+          ${carsData.length > 0 ? `
+            <p class="text-gray-400 text-xs mt-2">
+              Total mobil di database: ${carsData.length}<br>
+              Mobil tersedia untuk brand: ${Array.from(new Set(carsData.map(car => getBrandName(car)))).join(', ')}
+            </p>
+          ` : ''}
+        </div>
+      ` : `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+          ${cars
+      .map(
+        (car) => `
+            <div class="admin-car-item bg-white rounded-lg shadow-lg overflow-hidden border-2 border-[#FFB703] cursor-pointer" data-image="${car.image}">
+              <div class="h-28 md:h-40 bg-gray-200 overflow-hidden relative">
+                <img src="${car.image}" class="w-full h-full object-cover" 
+                     onerror="this.src='https://picsum.photos/400/300?random=1'">
+                ${car.gallery && car.gallery.length > 1 ? `
+                  <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                    <i class="fa-solid fa-images"></i>
+                    ${car.gallery.length}
+                  </div>
+                ` : ''}
+              </div>
+              <div class="bg-[#14213D] text-white px-3 py-2">
+                <p class="text-xs uppercase tracking-wide opacity-70">${getBrandName(car)}</p>
+                <h3 class="text-sm md:text-base font-bold line-clamp-1">${car.model_name || "Model"}</h3>
+                <p class="text-xs md:text-sm font-semibold mt-1">${formatPrice(car.price)}</p>
+                <div class="mt-2 pt-2 border-t border-white/20 text-xs">
+                  <p><i class="fa-solid fa-gas-pump mr-1"></i> ${car.fuel_type || 'Bensin'}</p>
+                  <p><i class="fa-solid fa-cog mr-1"></i> ${car.transmission || 'Manual'}</p>
+                  <p><i class="fa-solid fa-road mr-1"></i> ${car.kilometers || '0'} km</p>
+                  <p><i class="fa-solid fa-calendar mr-1"></i> ${car.year || 'N/A'}</p>
                 </div>
-              ` : ''}
+              </div>
+              <div class="bg-gray-800/50 p-2 flex justify-end gap-2">
+                  <button class="admin-edit-car-btn text-xs bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded" data-id="${car.id}">
+                      <i class="fa-solid fa-pencil"></i> Edit
+                  </button>
+                  <button class="admin-delete-car-btn text-xs bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" data-id="${car.id}">
+                      <i class="fa-solid fa-trash"></i> Hapus
+                  </button>
+              </div>
             </div>
-            <div class="bg-[#14213D] text-white px-3 py-2">
-              <p class="text-xs uppercase tracking-wide opacity-70">${car.brand}</p>
-              <h3 class="text-sm md:text-base font-bold line-clamp-1">${car.model || "Model"}</h3>
-              <p class="text-xs md:text-sm font-semibold mt-1">${car.price || "Rp 0"}</p>
-              ${car.creditDownPayment ? `
-                <div class="mt-2 pt-2 border-t border-white/20">
-                  <p class="text-xs opacity-80">Kredit: DP ${car.creditDownPayment}</p>
-                  <p class="text-xs opacity-80">Cicilan: ${car.monthlyInstallment}/bulan</p>
-                </div>
-              ` : ''}
-            </div>
-            <div class="bg-gray-800/50 p-2 flex justify-end gap-2">
-                <button class="admin-edit-car-btn text-xs bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded" data-id="${car.id}">
-                    <i class="fa-solid fa-pencil"></i> Edit
-                </button>
-                <button class="admin-delete-car-btn text-xs bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" data-id="${car.id}">
-                    <i class="fa-solid fa-trash"></i> Hapus
-                </button>
-            </div>
-          </div>
-        `
-                )
-                .join("")
-            : `<p class="col-span-1 md:col-span-2 text-center text-yellow-300 text-sm md:text-base">Belum ada mobil untuk brand ini.</p>`
-        }
-      </div>
+          `
+      )
+      .join("")}
+        </div>
+      `}
     </div>
   `;
 }
 
+// Helper function to format price
+function formatPrice(price) {
+  if (!price) return "Rp 0";
+  if (typeof price === 'string' && price.startsWith('Rp')) return price;
+
+  // Convert number to Indonesian currency format
+  const num = parseInt(price.replace(/\D/g, '') || 0);
+  return 'Rp ' + num.toLocaleString('id-ID');
+}
+
 function renderAdminDetailForm(car = null) {
   const isEditMode = car !== null;
-  
+
   // Get existing images from car data
-  const existingImages = isEditMode ? car.images || [] : [];
-  
+  const existingImages = isEditMode ? (car.gallery || []) : [];
+
+  // Get brand ID for current brand
+  const currentBrand = getAvailableBrands().find(b => b.name.toUpperCase() === adminCurrentBrand.toUpperCase()) || null;
+  const availableBrands = getAvailableBrands();
+
   return `
     <div class="max-h-[520px] md:max-h-[640px] overflow-y-auto pr-2 md:pr-4 scrollbar-hide">
     <form id="admin-car-form" data-id="${isEditMode ? car.id : ''}">
@@ -183,8 +392,8 @@ function renderAdminDetailForm(car = null) {
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           ${["Sampul", "Foto 1", "Foto 2", "Foto 3"]
-            .map(
-              (label, index) => `
+      .map(
+        (label, index) => `
             <div class="image-upload-container">
               <label class="flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded-2xl bg-[#101a30] py-8 cursor-pointer hover:border-[#FFB703] transition-colors relative">
                 <input type="file" class="hidden image-input" data-image-index="${index}" accept="image/*">
@@ -204,8 +413,8 @@ function renderAdminDetailForm(car = null) {
               </label>
             </div>
           `
-            )
-            .join("")}
+      )
+      .join("")}
         </div>
       </div>
 
@@ -217,49 +426,120 @@ function renderAdminDetailForm(car = null) {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label class="block text-sm font-semibold mb-1">Merek*</label>
-            <input type="text" name="brand" value="${isEditMode ? car.brand : adminCurrentBrand}" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white" readonly>
+            <select name="brand_id" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white" required>
+              <option value="">-- Pilih Merek --</option>
+              ${availableBrands
+      .map(b => `
+                  <option value="${b.id}" 
+                    ${(isEditMode && car.brand_id === b.id) || (!isEditMode && currentBrand && b.id === currentBrand.id) ? 'selected' : ''}>
+                    ${b.name}
+                  </option>
+                `)
+      .join('')}
+            </select>
           </div>
           <div>
             <label class="block text-sm font-semibold mb-1">Model*</label>
-            <input name="model" type="text" placeholder="e.g., Avanza, Brio" value="${isEditMode ? car.model || '' : ''}" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white">
+            <input name="model_name" type="text" placeholder="e.g., Avanza, Brio" 
+                   value="${isEditMode ? car.model_name || '' : ''}" 
+                   class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white" required>
           </div>
           <div>
             <label class="block text-sm font-semibold mb-1">Tahun*</label>
-            <input name="year" type="number" placeholder="e.g., 2022" value="${isEditMode ? car.year || '' : ''}" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white">
+            <input name="year" type="number" placeholder="e.g., 2022" 
+                   value="${isEditMode ? car.year || '' : ''}" 
+                   class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white" required
+                   min="1900" max="2030">
           </div>
           <div>
             <label class="block text-sm font-semibold mb-1">Harga*</label>
-            <input name="price" type="text" placeholder="e.g., Rp150.000.000" value="${isEditMode ? car.price || '' : ''}" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white">
+            <input name="price" type="text" placeholder="e.g., Rp150.000.000" 
+                   value="${isEditMode ? formatPrice(car.price) : ''}" 
+                   class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white" required>
           </div>
           <div>
-            <label class="block text-sm font-semibold mb-1">Estimasi Kredit (DP)</label>
-            <input name="creditDownPayment" type="text" placeholder="e.g., Rp30.000.000" value="${isEditMode ? car.creditDownPayment || '' : ''}" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white">
+            <label class="block text-sm font-semibold mb-1">Tipe Bahan Bakar*</label>
+            <select name="fuel_type" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white" required>
+              <option value="Bensin" ${isEditMode && car.fuel_type === 'Bensin' ? 'selected' : ''}>Bensin</option>
+              <option value="Diesel" ${isEditMode && car.fuel_type === 'Diesel' ? 'selected' : ''}>Diesel</option>
+              <option value="Elektrik" ${isEditMode && car.fuel_type === 'Elektrik' ? 'selected' : ''}>Elektrik</option>
+              <option value="Hybrid" ${isEditMode && car.fuel_type === 'Hybrid' ? 'selected' : ''}>Hybrid</option>
+            </select>
           </div>
           <div>
-            <label class="block text-sm font-semibold mb-1">Cicilan per Bulan</label>
-            <input name="monthlyInstallment" type="text" placeholder="e.g., Rp4.500.000" value="${isEditMode ? car.monthlyInstallment || '' : ''}" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white">
+            <label class="block text-sm font-semibold mb-1">Transmisi*</label>
+            <select name="transmission" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white" required>
+              <option value="Manual" ${isEditMode && car.transmission === 'Manual' ? 'selected' : ''}>Manual</option>
+              <option value="Automatic" ${isEditMode && car.transmission === 'Automatic' ? 'selected' : ''}>Automatic</option>
+              <option value="CVT" ${isEditMode && car.transmission === 'CVT' ? 'selected' : ''}>CVT</option>
+            </select>
           </div>
           <div>
-            <label class="block text-sm font-semibold mb-1">Tenor (Bulan)</label>
-            <input name="creditTenor" type="number" placeholder="e.g., 36" value="${isEditMode ? car.creditTenor || '' : ''}" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white">
+            <label class="block text-sm font-semibold mb-1">Kilometer*</label>
+            <input name="kilometers" type="text" placeholder="e.g., 95.000 km" 
+                   value="${isEditMode ? car.kilometers || '' : ''}" 
+                   class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white" required>
           </div>
           <div>
-            <label class="block text-sm font-semibold mb-1">Bunga (%)</label>
-            <input name="interestRate" type="number" step="0.01" placeholder="e.g., 5.5" value="${isEditMode ? car.interestRate || '' : ''}" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white">
+            <label class="block text-sm font-semibold mb-1">Warna</label>
+            <input name="color" type="text" placeholder="e.g., Hitam" 
+                   value="${isEditMode ? car.color || '' : ''}" 
+                   class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Kapasitas Mesin</label>
+            <input name="engine_capacity" type="text" placeholder="e.g., 1.5L" 
+                   value="${isEditMode ? car.engine_capacity || '' : ''}" 
+                   class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Lokasi</label>
+            <input name="location" type="text" placeholder="e.g., Jakarta" 
+                   value="${isEditMode ? car.location || '' : ''}" 
+                   class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white">
+          </div>
+          <div class="md:col-span-2">
+            <label class="flex items-center gap-2">
+              <input type="checkbox" name="is_featured" ${isEditMode && car.is_featured ? 'checked' : ''} 
+                     class="rounded border-gray-400">
+              <span class="text-sm font-semibold">Tampilkan sebagai mobil unggulan</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="border-t border-[#FFB703]/60 pt-6 mt-4">
+          <h3 class="text-lg md:text-xl font-bold mb-3">Fitur Mobil</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-semibold mb-1">Fitur Interior (pisahkan dengan koma)</label>
+              <textarea name="interior" rows="3" placeholder="Jok kulit, power steering, AC"
+                        class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white resize-none">${isEditMode ? (Array.isArray(car.interior) ? car.interior.join(', ') : car.interior) : ''}</textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">Fitur Eksterior (pisahkan dengan koma)</label>
+              <textarea name="exterior" rows="3" placeholder="Alloy wheels, sunroof, fog lights"
+                        class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white resize-none">${isEditMode ? (Array.isArray(car.exterior) ? car.exterior.join(', ') : car.exterior) : ''}</textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">Fitur Keselamatan & Lainnya (pisahkan dengan koma)</label>
+              <textarea name="features" rows="3" placeholder="ABS, airbag, alarm"
+                        class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white resize-none">${isEditMode ? (Array.isArray(car.features) ? car.features.join(', ') : car.features) : ''}</textarea>
+            </div>
           </div>
         </div>
 
         <div class="border-t border-[#FFB703]/60 pt-6 mt-4">
           <h3 class="text-lg md:text-xl font-bold mb-3">Deskripsi*</h3>
           <div>
-            <textarea name="description" rows="4" placeholder="Sertakan kondisi, fitur, dan alasan penjualan" class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white resize-none">${isEditMode ? car.description || '' : ''}</textarea>
+            <textarea name="description" rows="4" placeholder="Sertakan kondisi, fitur, dan alasan penjualan" 
+                      class="w-full rounded-xl border border-gray-400 px-4 py-2 text-black bg-white resize-none" required>${isEditMode ? car.description || '' : ''}</textarea>
           </div>
         </div>
 
         <div class="flex justify-end mt-6">
             <button type="submit"
               class="px-8 md:px-10 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-sm md:text-base tracking-wide shadow-lg">
-              ${isEditMode ? 'SIMPAN PERUBAHAN' : 'PASANG SEKARANG'}
+              ${isEditMode ? 'SIMPAN PERUBAHAN' : 'TAMBAH MOBIL'}
             </button>
         </div>
       </div>
@@ -268,117 +548,206 @@ function renderAdminDetailForm(car = null) {
   `;
 }
 
-// LOGIC HANDLERS
-function handleDeleteCar(carId) {
-    const carIndex = carsData.findIndex(c => c.id === carId);
-    if (carIndex === -1) {
-        window.showToast("Mobil tidak ditemukan!", "error");
-        return;
-    }
-
-    const car = carsData[carIndex];
-    window.showConfirm(
-        `Apakah Anda yakin ingin menghapus mobil ${car.brand} ${car.model || ''}?`,
-        () => {
-        carsData.splice(carIndex, 1);
-        window.showToast("Mobil berhasil dihapus!", "success");
-        rerender();
+// API FUNCTIONS
+async function deleteCar(carId) {
+  try {
+    const response = await fetch(`${CARS_API_URL}/${carId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
+
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      window.showToast("Mobil berhasil dihapus!", "success");
+      return true;
+    } else {
+      throw new Error(result.message || 'Gagal menghapus mobil');
+    }
+  } catch (error) {
+    console.error('Error deleting car:', error);
+    window.showToast(error.message || "Gagal menghapus mobil", "error");
+    return false;
+  }
+}
+
+async function createCar(carData) {
+  try {
+    console.log('Creating car with data:', carData);
+    const response = await fetch(CARS_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(carData),
+    });
+
+    const result = await response.json();
+    console.log('Create car response:', result);
+
+    if (response.ok && result.success) {
+      window.showToast("Mobil berhasil ditambahkan!", "success");
+      return result.data;
+    } else {
+      throw new Error(result.message || 'Gagal menambahkan mobil');
+    }
+  } catch (error) {
+    console.error('Error creating car:', error);
+    window.showToast(error.message || "Gagal menambahkan mobil", "error");
+    return null;
+  }
+}
+
+async function updateCar(carId, carData) {
+  try {
+    const response = await fetch(`${CARS_API_URL}/${carId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(carData),
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      window.showToast("Data mobil berhasil disimpan!", "success");
+      return result.data;
+    } else {
+      throw new Error(result.message || 'Gagal memperbarui mobil');
+    }
+  } catch (error) {
+    console.error('Error updating car:', error);
+    window.showToast(error.message || "Gagal memperbarui mobil", "error");
+    return null;
+  }
+}
+
+// LOGIC HANDLERS
+async function handleDeleteCar(carId) {
+  const car = carsData.find(c => c.id === carId);
+  if (!car) {
+    window.showToast("Mobil tidak ditemukan!", "error");
+    return;
+  }
+
+  window.showConfirm(
+    `Apakah Anda yakin ingin menghapus mobil ${getBrandName(car)} ${car.model_name || ''}?`,
+    async () => {
+      const success = await deleteCar(carId);
+      if (success) {
+        await rerender();
+      }
+    }
+  );
 }
 
 function handleStartEdit(carId) {
-    adminIsEditing = true;
-    adminEditingCarId = carId;
-    rerender();
+  adminIsEditing = true;
+  adminEditingCarId = carId;
+  rerender();
 }
 
 async function handleFormSubmit(event) {
-    event.preventDefault();
-    const form = event.target;
-    const carId = adminEditingCarId;
-    const formData = new FormData(form);
-    
-    // Get car data for confirmation message
-    const carBrand = formData.get('brand');
-    const carModel = formData.get('model');
-    const isEditMode = !!carId;
-    
-    // Show confirmation dialog
-    window.showConfirm(
-        `Apakah Anda yakin ingin ${isEditMode ? 'mengubah' : 'menambah'} mobil ${carBrand} ${carModel || ''}?`,
-        () => {
-            // User clicked "Yes" - proceed with save
-            proceedWithSave(form, carId, formData);
-        },
-        () => {
-            // User clicked "No" - cancel
-            window.showToast("Penyimpanan dibatalkan", "info");
-        }
-    );
+  event.preventDefault();
+  const form = event.target;
+  const carId = adminEditingCarId;
+  const formData = new FormData(form);
+
+  // Get car data for confirmation message
+  const brandName = form.querySelector('select[name="brand_id"]').selectedOptions[0]?.text || adminCurrentBrand;
+  const carModel = formData.get('model_name');
+  const isEditMode = !!carId;
+
+  // Show confirmation dialog
+  window.showConfirm(
+    `Apakah Anda yakin ingin ${isEditMode ? 'mengubah' : 'menambah'} mobil ${brandName} ${carModel || ''}?`,
+    async () => {
+      // User clicked "Yes" - proceed with save
+      await proceedWithSave(form, carId, formData);
+    },
+    () => {
+      // User clicked "No" - cancel
+      window.showToast("Penyimpanan dibatalkan", "info");
+    }
+  );
 }
 
 async function proceedWithSave(form, carId, formData) {
-    // Collect uploaded images
-    const images = [];
-    const imageInputs = form.querySelectorAll('.image-input');
-    
-    // Process images synchronously
-    for (let index = 0; index < imageInputs.length; index++) {
-      const input = imageInputs[index];
-      if (input.files && input.files[0]) {
-        // Convert to base64
-        const imageData = await convertFileToBase64(input.files[0]);
-        images[index] = imageData;
-      } else if (carId) {
-        // Keep existing image if editing
-        const existingCar = carsData.find(c => c.id === carId);
-        if (existingCar && existingCar.images && existingCar.images[index]) {
-          images[index] = existingCar.images[index];
-        }
+  // Collect uploaded images
+  const images = [];
+  const imageInputs = form.querySelectorAll('.image-input');
+
+  // Process images synchronously
+  for (let index = 0; index < imageInputs.length; index++) {
+    const input = imageInputs[index];
+    if (input.files && input.files[0]) {
+      // Convert to base64
+      const imageData = await convertFileToBase64(input.files[0]);
+      images[index] = imageData;
+    } else if (carId) {
+      // Keep existing image if editing
+      const existingCar = carsData.find(c => c.id === carId);
+      if (existingCar && existingCar.gallery && existingCar.gallery[index]) {
+        images[index] = existingCar.gallery[index];
       }
     }
-    
-    const carData = {
-        brand: formData.get('brand'),
-        model: formData.get('model'),
-        year: formData.get('year'),
-        price: formData.get('price'),
-        description: formData.get('description'),
-        creditDownPayment: formData.get('creditDownPayment'),
-        monthlyInstallment: formData.get('monthlyInstallment'),
-        creditTenor: formData.get('creditTenor'),
-        interestRate: formData.get('interestRate'),
-        images: images.filter(img => img !== undefined),
-        // Keep old main image on edit, or use a placeholder for new cars
-        image: carId ? carsData.find(c=>c.id === carId).image : 'https://picsum.photos/400/300?random=' + Math.floor(Math.random() * 100), 
-    };
+  }
 
-    if (carId) {
-        // Update existing car
-        const carIndex = carsData.findIndex(c => c.id === carId);
-        if (carIndex !== -1) {
-            carsData[carIndex] = { ...carsData[carIndex], ...carData };
-            window.showToast("Data mobil berhasil disimpan!", "success");
-        }
-    } else {
-        // Add new car
-        const newId = carsData.length > 0 ? Math.max(...carsData.map(c => c.id)) + 1 : 1;
-        carsData.push({ id: newId, ...carData });
-        window.showToast("Mobil baru berhasil ditambahkan!", "success");
-    }
+  // Prepare car data for API
+  const carData = {
+    brand_id: formData.get('brand_id'),
+    model_name: formData.get('model_name'),
+    year: parseInt(formData.get('year')),
+    price: formData.get('price'),
+    fuel_type: formData.get('fuel_type'),
+    transmission: formData.get('transmission'),
+    kilometers: formData.get('kilometers'),
+    description: formData.get('description'),
+    color: formData.get('color'),
+    engine_capacity: formData.get('engine_capacity'),
+    location: formData.get('location'),
+    is_featured: formData.get('is_featured') === 'on',
+    // Convert comma-separated strings to arrays
+    interior: formData.get('interior') ? formData.get('interior').split(',').map(item => item.trim()).filter(item => item) : [],
+    exterior: formData.get('exterior') ? formData.get('exterior').split(',').map(item => item.trim()).filter(item => item) : [],
+    features: formData.get('features') ? formData.get('features').split(',').map(item => item.trim()).filter(item => item) : [],
+    // Use first image as main image, or default
+    image: images[0] || 'https://picsum.photos/400/300?random=' + Math.floor(Math.random() * 100),
+    gallery: images.filter(img => img !== undefined),
+  };
 
+  console.log('Sending car data to API:', carData);
+
+  let success = false;
+  let result = null;
+
+  if (carId) {
+    // Update existing car
+    result = await updateCar(carId, carData);
+    success = result !== null;
+  } else {
+    // Add new car
+    result = await createCar(carData);
+    success = result !== null;
+  }
+
+  if (success) {
     adminIsEditing = false;
     adminEditingCarId = null;
-    rerender();
+    await rerender();
+  }
 }
 
 function convertFileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 // IMAGE HANDLERS
@@ -386,36 +755,27 @@ async function handleImageUpload(event) {
   const input = event.target;
   const imageIndex = input.dataset.imageIndex;
   const file = input.files[0];
-  
+
   if (file) {
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       window.showToast('File harus berupa gambar!', 'error');
-      // Properly reset the input
       resetFileInput(input);
       return;
     }
-    
-    // Validate file size (max 5MB)
+
     if (file.size > 5 * 1024 * 1024) {
       window.showToast('Ukuran file maksimal 5MB!', 'error');
-      // Properly reset the input
       resetFileInput(input);
       return;
     }
-    
-    // Check if there's an existing image
+
     const container = input.closest('.image-upload-container');
     const existingPreview = container.querySelector('.image-preview-wrapper img');
-    
+
     if (existingPreview) {
-      // Show loading state
       showLoadingState(container);
-      
-      // Wait for user confirmation to replace existing image
       await waitForImageDeletion(container, imageIndex, file);
     } else {
-      // No existing image, proceed directly
       await processImageUpload(imageIndex, file, input);
     }
   }
@@ -423,16 +783,13 @@ async function handleImageUpload(event) {
 
 async function waitForImageDeletion(container, imageIndex, newFile) {
   return new Promise((resolve) => {
-    // Show confirmation dialog
     window.showConfirm(
       'Gambar sudah ada. Apakah Anda ingin menggantinya?',
       async () => {
-        // User confirmed to replace
         await processImageUpload(imageIndex, newFile, container.querySelector('.image-input'));
         resolve();
       },
       () => {
-        // User cancelled - reset input
         const input = container.querySelector('.image-input');
         resetFileInput(input);
         hideLoadingState(container);
@@ -444,14 +801,13 @@ async function waitForImageDeletion(container, imageIndex, newFile) {
 }
 
 async function processImageUpload(imageIndex, file, input) {
-  // Convert to base64 and show preview
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     updateImagePreview(imageIndex, e.target.result);
     hideLoadingState(input.closest('.image-upload-container'));
     window.showToast('Gambar berhasil diupload!', 'success');
   };
-  reader.onerror = function() {
+  reader.onerror = function () {
     window.showToast('Gagal memuat file!', 'error');
     resetFileInput(input);
     hideLoadingState(input.closest('.image-upload-container'));
@@ -474,36 +830,29 @@ function hideLoadingState(container) {
 }
 
 function resetFileInput(input) {
-  // Clone the input element to completely reset it
   const newInput = input.cloneNode(true);
   input.parentNode.replaceChild(newInput, input);
-  
-  // Re-attach event listener to the new input
   newInput.addEventListener('change', handleImageUpload);
 }
 
 function updateImagePreview(imageIndex, imageSrc) {
   const container = document.querySelector(`[data-image-index="${imageIndex}"]`).closest('.image-upload-container');
   const previewWrapper = container.querySelector('.image-preview-wrapper');
-  
-  // Remove existing content
+
   previewWrapper.innerHTML = '';
-  
-  // Add new image
+
   const img = document.createElement('img');
   img.src = imageSrc;
   img.alt = `Foto ${parseInt(imageIndex) + 1}`;
   img.className = 'w-full h-20 object-cover rounded-lg mb-2';
-  
-  // Add remove button
+
   const removeBtn = document.createElement('button');
   removeBtn.type = 'button';
   removeBtn.className = 'remove-image-btn absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600';
   removeBtn.dataset.imageIndex = imageIndex;
   removeBtn.innerHTML = '<i class="fa-solid fa-times"></i>';
   removeBtn.addEventListener('click', handleRemoveImage);
-  
-  // Add to container
+
   previewWrapper.appendChild(img);
   previewWrapper.appendChild(removeBtn);
 }
@@ -514,48 +863,47 @@ function handleRemoveImage(event) {
   const container = event.currentTarget.closest('.image-upload-container');
   const input = container.querySelector('.image-input');
   const previewWrapper = container.querySelector('.image-preview-wrapper');
-  
-  // Reset the file input completely
+
   resetFileInput(input);
-  
-  // Reset preview to original state
+
   previewWrapper.innerHTML = `
     <span class="text-3xl mb-2 text-gray-400"><i class="fa-regular fa-image"></i></span>
   `;
-  
-  // Show toast
+
   window.showToast('Foto berhasil dihapus', 'success');
 }
 
 // MOUNT
-export function mount() {
+export async function mount() {
+  // Load initial data
+  await loadData();
+
   // Mount sidebar functionality
   adminSidebarMount();
 
   // Back to dashboard button with confirmation
   const backBtn = document.getElementById("admin-back-to-dashboard-btn");
-  if(backBtn) {
-      backBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          window.showConfirm(
-            "Apakah Anda yakin ingin kembali ke dashboard? Perubahan yang belum disimpan akan hilang jika ada.",
-            () => {
-              // Navigate to admin dashboard
-              window.location.hash = "#admin-dashboard";
-              window.location.reload();
-            }
-          );
-      });
+  if (backBtn) {
+    backBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.showConfirm(
+        "Apakah Anda yakin ingin kembali ke dashboard? Perubahan yang belum disimpan akan hilang jika ada.",
+        () => {
+          window.location.hash = "#admin-dashboard";
+          window.location.reload();
+        }
+      );
+    });
   }
 
   // Car item click to change image
   document.querySelectorAll('.admin-car-item').forEach(card => {
     card.addEventListener('click', e => {
       if (e.target.closest('button')) {
-        return; // Don't do anything if a button inside the card was clicked
+        return;
       }
       adminSelectedCarImage = e.currentTarget.dataset.image;
-      rerender(); // Re-render to show the new main image
+      rerender();
     })
   });
 
@@ -563,7 +911,7 @@ export function mount() {
   document.querySelectorAll(".admin-brand-filter-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       adminCurrentBrand = btn.dataset.brand;
-      adminSelectedCarImage = `/images/${adminCurrentBrand.toLowerCase()}_car.png`; // Reset image
+      adminSelectedCarImage = `/images/${adminCurrentBrand.toLowerCase()}_car.png`;
       adminIsEditing = false;
       adminEditingCarId = null;
       rerender();
@@ -575,18 +923,16 @@ export function mount() {
   if (toggleBtn) {
     toggleBtn.addEventListener("click", () => {
       if (adminIsEditing) {
-        // Ask for confirmation when cancelling
         window.showConfirm(
           "Apakah Anda yakin ingin membatalkan? Perubahan yang belum disimpan akan hilang.",
           () => {
-              window.showToast("Perubahan dibatalkan.", "info");
-              adminIsEditing = false;
-              adminEditingCarId = null;
-              rerender();
+            window.showToast("Perubahan dibatalkan.", "info");
+            adminIsEditing = false;
+            adminEditingCarId = null;
+            rerender();
           }
         );
       } else {
-        // No confirmation needed to open the form
         adminIsEditing = true;
         adminEditingCarId = null;
         rerender();
@@ -594,17 +940,15 @@ export function mount() {
     });
   }
 
-  // Image upload handlers - remove existing listeners first to prevent duplication
+  // Image upload handlers
   document.querySelectorAll('.image-input').forEach(input => {
-    // Clone the input to remove all existing event listeners
     const newInput = input.cloneNode(true);
     input.parentNode.replaceChild(newInput, input);
     newInput.addEventListener('change', handleImageUpload);
   });
 
-  // Remove image handlers - remove existing listeners first to prevent duplication
+  // Remove image handlers
   document.querySelectorAll('.remove-image-btn').forEach(btn => {
-    // Clone the button to remove all existing event listeners
     const newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
     newBtn.addEventListener('click', handleRemoveImage);
@@ -613,24 +957,29 @@ export function mount() {
   // Add/Edit Form submission
   const carForm = document.getElementById("admin-car-form");
   if (carForm) {
-      carForm.addEventListener('submit', handleFormSubmit);
+    carForm.addEventListener('submit', handleFormSubmit);
   }
 
   // Delete car buttons
   document.querySelectorAll('.admin-delete-car-btn').forEach(button => {
-      button.addEventListener('click', (e) => {
-          e.stopPropagation(); // prevent card click event
-          const carId = parseInt(e.currentTarget.dataset.id, 10);
-          handleDeleteCar(carId);
-      });
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const carId = e.currentTarget.dataset.id;
+      handleDeleteCar(carId);
+    });
   });
 
   // Edit car buttons
   document.querySelectorAll('.admin-edit-car-btn').forEach(button => {
-      button.addEventListener('click', (e) => {
-          e.stopPropagation(); // prevent card click event
-          const carId = parseInt(e.currentTarget.dataset.id, 10);
-          handleStartEdit(carId);
-      });
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const carId = e.currentTarget.dataset.id;
+      handleStartEdit(carId);
+    });
   });
 }
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadData();
+});
