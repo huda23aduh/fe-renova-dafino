@@ -1,13 +1,16 @@
 import { carsData } from "../../data/mockData.js";
 
-function getUserSession() {
-  const session = localStorage.getItem('userSession') || sessionStorage.getItem('userSession');
-  return session ? JSON.parse(session) : null;
+import { getAuth, logout } from '../../utils/auth.js';
+
+function getUser() {
+  const auth = getAuth();
+  return auth ? auth.user : null;
 }
 
+
 export default function Navbar() {
-  const user = getUserSession();
-  
+  const user = getUser();
+
   return `
   <nav class="fixed top-0 left-0 right-0 z-50 bg-[#14213D] text-white px-4 md:px-10 lg:px-20 py-4 flex items-center justify-between mobile-nav-padding">
     <!-- Logo -->
@@ -36,7 +39,7 @@ export default function Navbar() {
         
         <!-- User Icon Dropdown -->
         <div class="relative flex items-center gap-2">
-          ${user ? `<span class="text-sm font-semibold text-[#FFB703] hidden xl:block">Halo, ${user.name.split(' ')[0]}</span>` : ''}
+          ${user ? `<span class="text-sm font-semibold text-[#FFB703] hidden xl:block">Halo, ${user.email.split('@')[0]}</span>` : ''}
           <span class="w-10 h-10 flex items-center justify-center rounded-full cursor-pointer hover:opacity-80 transition-colors" style="background: linear-gradient(45deg, #FFB703 0%, #14213D 50%, #FFB703 100%);" id="user-icon-desktop">
             <i class="fa-regular fa-user"></i>
           </span>
@@ -45,7 +48,7 @@ export default function Navbar() {
           <div id="user-dropdown-desktop" class="hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
             ${user ? `
               <div class="px-4 py-2 border-b border-gray-200">
-                <p class="text-sm font-bold text-gray-800">${user.name}</p>
+                <p class="text-sm font-bold text-gray-800">${user.email}</p>
                 <p class="text-xs text-gray-500">${user.email}</p>
               </div>
               <a href="#profile" class="block px-4 py-2 text-black hover:bg-gray-100 transition-colors text-sm">
@@ -193,50 +196,50 @@ export function mountNavbar() {
   // Desktop user icon dropdown
   const userIconDesktop = document.getElementById('user-icon-desktop');
   const userDropdownDesktop = document.getElementById('user-dropdown-desktop');
-  
+
   if (userIconDesktop && userDropdownDesktop) {
     userIconDesktop.addEventListener('click', (e) => {
       e.stopPropagation();
       userDropdownDesktop.classList.toggle('hidden');
     });
-    
+
     // Close dropdown when clicking outside
     document.addEventListener('click', () => {
       userDropdownDesktop.classList.add('hidden');
     });
   }
-  
+
   // Mobile user icon dropdown
   const userIconMobile = document.getElementById('user-icon-mobile');
   const userDropdownMobile = document.getElementById('user-dropdown-mobile');
-  
+
   if (userIconMobile && userDropdownMobile) {
     userIconMobile.addEventListener('click', (e) => {
       e.stopPropagation();
       userDropdownMobile.classList.toggle('hidden');
     });
-    
+
     // Close dropdown when clicking outside
     document.addEventListener('click', () => {
       userDropdownMobile.classList.add('hidden');
     });
   }
-  
+
   // Hamburger menu toggle
   const menuBtn = document.getElementById('menu-btn');
   const mobileMenu = document.getElementById('mobile-menu');
   const menuIcon = document.getElementById('menu-icon');
-  
+
   if (menuBtn && mobileMenu && menuIcon) {
     menuBtn.addEventListener('click', () => {
       const isHidden = mobileMenu.classList.contains('hidden');
-      
+
       if (isHidden) {
         mobileMenu.classList.remove('hidden');
         mobileMenu.classList.add('flex');
         mobileMenu.classList.add('opacity-100');
         mobileMenu.classList.remove('opacity-0');
-        
+
         menuIcon.classList.remove('fa-bars');
         menuIcon.classList.add('fa-xmark', 'rotate-90');
       } else {
@@ -244,12 +247,12 @@ export function mountNavbar() {
         mobileMenu.classList.remove('flex');
         mobileMenu.classList.remove('opacity-100');
         mobileMenu.classList.add('opacity-0');
-        
+
         menuIcon.classList.add('fa-bars');
         menuIcon.classList.remove('fa-xmark', 'rotate-90');
       }
     });
-    
+
     // Close menu saat klik link
     mobileMenu.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', () => {
@@ -257,7 +260,7 @@ export function mountNavbar() {
         mobileMenu.classList.remove('flex');
         mobileMenu.classList.remove('opacity-100');
         mobileMenu.classList.add('opacity-0');
-        
+
         menuIcon.classList.add('fa-bars');
         menuIcon.classList.remove('fa-xmark', 'rotate-90');
       });
@@ -290,7 +293,7 @@ export function mountNavbar() {
       return;
     }
 
-    const filtered = carsData.filter(car => 
+    const filtered = carsData.filter(car =>
       car.brand.toLowerCase().includes(query.toLowerCase()) ||
       (car.name && car.name.toLowerCase().includes(query.toLowerCase())) ||
       (car.type && car.type.toLowerCase().includes(query.toLowerCase()))
@@ -372,7 +375,7 @@ export function mountNavbar() {
   function updateFavoriteCount() {
     const favorites = getFavorites();
     const count = favorites.length;
-    
+
     if (favoriteCountDesktop) {
       favoriteCountDesktop.textContent = count;
       favoriteCountDesktop.classList.toggle('hidden', count === 0);
@@ -394,14 +397,14 @@ export function mountNavbar() {
 
   function renderFavoriteList() {
     const favorites = getFavorites();
-    
+
     if (favorites.length === 0) {
       favoriteList.innerHTML = '<p class="text-gray-400 text-center py-8">Belum ada mobil favorit</p>';
       return;
     }
 
     const favoriteCars = carsData.filter(car => favorites.includes(car.id.toString()));
-    
+
     favoriteList.innerHTML = favoriteCars.map(car => `
       <div class="favorite-item flex items-center gap-4 p-3 rounded-lg hover:bg-white/10 transition" data-car-id="${car.id}">
         <img src="${car.image}" class="w-16 h-12 object-cover rounded-lg cursor-pointer favorite-car-link" data-car-id="${car.id}" data-brand="${car.brand}">
@@ -487,7 +490,7 @@ export function mountNavbar() {
   function updateNotificationCount() {
     const notifications = getNotifications();
     const unreadCount = notifications.filter(notif => !notif.read).length;
-    
+
     if (notificationCountDesktop) {
       notificationCountDesktop.textContent = unreadCount;
       notificationCountDesktop.classList.toggle('hidden', unreadCount === 0);
@@ -509,7 +512,7 @@ export function mountNavbar() {
 
   function renderNotificationList() {
     const notifications = getNotifications();
-    
+
     if (notifications.length === 0) {
       notificationList.innerHTML = '<p class="text-gray-400 text-center py-8">Tidak ada notifikasi</p>';
       return;
@@ -644,14 +647,7 @@ export function mountNavbar() {
 
   function handleLogout() {
     window.showConfirm('Apakah Anda yakin ingin keluar?', () => {
-      localStorage.removeItem('userSession');
-      sessionStorage.removeItem('userSession');
-      sessionStorage.setItem('pendingToast', JSON.stringify({
-        message: 'Anda telah keluar dari akun',
-        type: 'success'
-      }));
-      window.location.hash = '#home';
-      window.location.reload();
+      logout();
     });
   }
 

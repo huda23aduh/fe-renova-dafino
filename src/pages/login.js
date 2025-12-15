@@ -1,3 +1,5 @@
+import config from '../config/config.js';
+
 export default function LoginPage() {
   return `
     <section class="min-h-screen bg-gradient-to-br from-gray-200 via-gray-100 to-gray-300 flex items-center justify-center px-4 py-2">
@@ -113,6 +115,7 @@ export default function LoginPage() {
 }
 
 export function mount() {
+  ;
   const form = document.getElementById('login-form');
   const loginError = document.getElementById('login-error');
   const togglePassword = document.getElementById('toggle-password');
@@ -129,58 +132,60 @@ export function mount() {
     });
   }
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+    loginError.classList.add('hidden');
+
     const formData = new FormData(form);
-    const username = formData.get('username');
+    const username = formData.get('username'); // email
     const password = formData.get('password');
     const remember = formData.get('remember');
 
-    // Get registered users from localStorage
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    
-    // Find user by email or phone
-    const user = users.find(u => u.email === username || u.phone === username);
+    try {
+      const res = await fetch(config.API_BASE_URL + '/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: username,
+          password
+        })
+      });
 
-    if (!user) {
-      loginError.textContent = 'Email/No Telepon tidak terdaftar';
+      const data = await res.json();
+
+      if (!res.ok) {
+        loginError.textContent = data.message || 'Login gagal';
+        loginError.classList.remove('hidden');
+        return;
+      }
+
+      // ✅ Login success
+      const session = {
+        token: data.token
+      };
+
+      if (remember) {
+        localStorage.setItem('auth', JSON.stringify(session));
+      } else {
+        sessionStorage.setItem('auth', JSON.stringify(session));
+      }
+
+      sessionStorage.setItem('pendingToast', JSON.stringify({
+        message: 'Login berhasil!',
+        type: 'success'
+      }));
+
+      window.location.hash = '#home';
+      window.location.reload();
+
+    } catch (err) {
+      loginError.textContent = 'Server tidak dapat dihubungi';
       loginError.classList.remove('hidden');
-      return;
     }
-
-    if (user.password !== password) {
-      loginError.textContent = 'Password salah';
-      loginError.classList.remove('hidden');
-      return;
-    }
-
-    // Login success
-    loginError.classList.add('hidden');
-    
-    // Save session
-    const session = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      loggedIn: true
-    };
-
-    if (remember) {
-      localStorage.setItem('userSession', JSON.stringify(session));
-    } else {
-      sessionStorage.setItem('userSession', JSON.stringify(session));
-    }
-
-    // Save toast message and redirect
-    sessionStorage.setItem('pendingToast', JSON.stringify({
-      message: 'Login berhasil! Selamat datang, ' + user.name,
-      type: 'success'
-    }));
-    window.location.hash = '#home';
-    window.location.reload();
   });
+
 
   // Google login placeholder
   const googleBtn = document.getElementById('google-login-btn');

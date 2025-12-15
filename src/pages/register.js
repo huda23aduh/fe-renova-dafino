@@ -1,3 +1,5 @@
+import config from '../config/config.js';
+
 export default function RegisterPage() {
   return `
     <section class="min-h-screen bg-gradient-to-br from-gray-200 via-gray-100 to-gray-300 flex items-center justify-center px-4 py-6">
@@ -185,12 +187,14 @@ export function mount() {
     });
   });
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
+    registerError.classList.add('hidden');
+
     const formData = new FormData(form);
     const fullName = formData.get('fullName');
-    const phone = formData.get('phone');
+    const phone = formData.get('phone'); // kept for UI only
     const email = formData.get('email');
     const password = formData.get('password');
     const confirmPassword = formData.get('confirmPassword');
@@ -202,72 +206,49 @@ export function mount() {
       return;
     }
 
-    // Password strength validation
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(password)) {
-      registerError.textContent = 'Password harus minimal 8 karakter, mengandung huruf besar, huruf kecil, angka, dan simbol';
+    try {
+      const res = await fetch(
+        config.API_BASE_URL + '/auth/register',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: fullName,
+            email,
+            phone,
+            password
+          })
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        registerError.textContent = data.message || 'Registrasi gagal';
+        registerError.classList.remove('hidden');
+        return;
+      }
+
+      // ✅ SUCCESS
+      sessionStorage.setItem(
+        'pendingToast',
+        JSON.stringify({
+          message: 'Pendaftaran berhasil! Silakan login.',
+          type: 'success'
+        })
+      );
+
+      window.location.hash = '#login';
+      window.location.reload();
+
+    } catch (err) {
+      registerError.textContent = 'Server error. Coba lagi nanti.';
       registerError.classList.remove('hidden');
-      return;
     }
-
-    // Phone validation
-    const phoneRegex = /^08\d{8,12}$/;
-    if (!phoneRegex.test(phone)) {
-      registerError.textContent = 'Format nomor telepon tidak valid (contoh: 08xxxxxxxxxx)';
-      registerError.classList.remove('hidden');
-      return;
-    }
-
-    // Get existing users
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-
-    // Check if email or phone already exists
-    if (users.some(u => u.email === email)) {
-      registerError.textContent = 'Email sudah terdaftar';
-      registerError.classList.remove('hidden');
-      return;
-    }
-
-    if (users.some(u => u.phone === phone)) {
-      registerError.textContent = 'Nomor telepon sudah terdaftar';
-      registerError.classList.remove('hidden');
-      return;
-    }
-
-    // Create new user
-    const newUser = {
-      id: Date.now(),
-      name: fullName,
-      phone: phone,
-      email: email,
-      password: password,
-      createdAt: new Date().toISOString()
-    };
-
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
-
-    // Success - auto login after register
-    registerError.classList.add('hidden');
-    
-    // Auto login
-    const session = {
-      id: newUser.id,
-      name: newUser.name,
-      email: newUser.email,
-      phone: newUser.phone,
-      loggedIn: true
-    };
-    localStorage.setItem('userSession', JSON.stringify(session));
-    
-    // Save toast message and redirect
-    sessionStorage.setItem('pendingToast', JSON.stringify({
-      message: 'Pendaftaran berhasil! Selamat datang, ' + newUser.name,
-      type: 'success'
-    }));
-    window.location.hash = '#home';
-    window.location.reload();
   });
+
 
   // Google register placeholder
   const googleBtn = document.getElementById('google-register-btn');
