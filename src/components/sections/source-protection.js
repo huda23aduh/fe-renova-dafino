@@ -1,36 +1,36 @@
 // Source Code Protection
-(function() {
+(function () {
   'use strict';
-  
+
   // Disable right-click context menu
-  document.addEventListener('contextmenu', function(e) {
+  document.addEventListener('contextmenu', function (e) {
     e.preventDefault();
     return false;
   });
 
   // Disable certain keyboard shortcuts
-  document.addEventListener('keydown', function(e) {
+  document.addEventListener('keydown', function (e) {
     // Disable F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S
-    if (e.key === 'F12' || 
-        (e.ctrlKey && e.shiftKey && e.key === 'I') ||
-        (e.ctrlKey && e.key === 'u') ||
-        (e.ctrlKey && e.key === 's')) {
+    if (e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+      (e.ctrlKey && e.key === 'u') ||
+      (e.ctrlKey && e.key === 's')) {
       e.preventDefault();
       return false;
     }
   });
 
   // Detect developer tools
-  let devtools = {open: false, orientation: null};
-  
-  setInterval(function() {
-    if (window.outerHeight - window.innerHeight > 200 || 
-        window.outerWidth - window.innerWidth > 200) {
+  let devtools = { open: false, orientation: null };
+
+  setInterval(function () {
+    if (window.outerHeight - window.innerHeight > 200 ||
+      window.outerWidth - window.innerWidth > 200) {
       if (!devtools.open) {
         devtools.open = true;
-        console.clear();
-        console.log('%cStop!', 'color: red; font-size: 50px; font-weight: bold;');
-        console.log('%cThis is a browser feature intended for developers.', 'color: red; font-size: 14px;');
+        // console.clear();
+        // console.log('%cStop!', 'color: red; font-size: 50px; font-weight: bold;');
+        // console.log('%cThis is a browser feature intended for developers.', 'color: red; font-size: 14px;');
       }
     } else {
       devtools.open = false;
@@ -46,10 +46,10 @@
     debug: console.debug
   };
 
-  console.log = function() {
+  console.log = function () {
     // Only show critical errors, hide debug messages
-    if (arguments[0] && typeof arguments[0] === 'string' && 
-        (arguments[0].includes('Error') || arguments[0].includes('Critical'))) {
+    if (arguments[0] && typeof arguments[0] === 'string' &&
+      (arguments[0].includes('Error') || arguments[0].includes('Critical'))) {
       originalConsole.log.apply(console, arguments);
     }
   };
@@ -59,10 +59,10 @@
     // Remove or disable source maps
     const scripts = document.querySelectorAll('script[src*=".map"]');
     scripts.forEach(script => script.remove());
-    
+
     // Override fetch to block source map requests
     const originalFetch = window.fetch;
-    window.fetch = function(...args) {
+    window.fetch = function (...args) {
       if (args[0] && typeof args[0] === 'string' && args[0].includes('.map')) {
         return Promise.reject(new Error('Source maps disabled'));
       }
@@ -75,7 +75,7 @@
   obfuscationKeys.forEach(key => {
     if (!window[key]) {
       Object.defineProperty(window, key, {
-        get: function() {
+        get: function () {
           return Math.random().toString(36).substr(2, 9);
         },
         configurable: false
@@ -85,12 +85,12 @@
 
   // Disable console in production
   if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-    console.log = console.info = console.warn = console.error = console.debug = function() {};
+    console.log = console.info = console.warn = console.error = console.debug = function () { };
   }
 
   // Anti-debugging technique
   let counter = 0;
-  const check = setInterval(function() {
+  const check = setInterval(function () {
     counter++;
     if (counter > 100) {
       clearInterval(check);
@@ -103,9 +103,9 @@
   }, 100);
 
   // Disable text selection on critical elements
-  document.addEventListener('selectstart', function(e) {
-    if (e.target.classList.contains('no-select') || 
-        e.target.closest('.no-select')) {
+  document.addEventListener('selectstart', function (e) {
+    if (e.target.classList.contains('no-select') ||
+      e.target.closest('.no-select')) {
       e.preventDefault();
     }
   });
