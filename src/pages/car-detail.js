@@ -7,7 +7,7 @@ let filteredBrandData = carsData;
 let currentBrand = null;
 
 // Global function for button navigation
-window.goToCarDetail = function(carId) {
+window.goToCarDetail = function (carId) {
   sessionStorage.setItem('selectedCarId', carId);
   router();
 };
@@ -15,7 +15,7 @@ window.goToCarDetail = function(carId) {
 export default function CarDetail() {
   // Get carId dari sessionStorage
   const carId = sessionStorage.getItem('selectedCarId');
-  
+
   currentCarId = carId;
   const parsedId = parseInt(currentCarId);
   const car = carsData.find(c => c.id === parsedId);
@@ -316,17 +316,17 @@ export function mount() {
       const car = carsData.find(c => c.id === parseInt(carId));
       const carName = car ? car.brand : 'Mobil';
       const carPrice = car ? car.price : 'Harga Hubungi Kami';
-      
+
       const shareText = `Lihat mobil pilihan saya di Renova Mobil!\n\n🚗 ${carName}\n💰 ${carPrice}\n\nKunjungi showroom kami untuk info lebih lanjut!`;
       const shareUrl = `${window.location.origin}${window.location.pathname}#car-detail`;
-      
+
       // Visual feedback for share button
       const originalColor = btn.style.color;
       btn.style.color = '#FFB703';
       setTimeout(() => {
         btn.style.color = originalColor;
       }, 300);
-      
+
       if (navigator.share) {
         navigator.share({
           title: `Mobil ${carName} - Renova Mobil`,
@@ -355,7 +355,7 @@ export function mount() {
 
   // Favorite button functionality
   const favoriteButtons = document.querySelectorAll('.car-like-detail');
-  
+
   // Initialize heart icons based on localStorage
   const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
   favoriteButtons.forEach(btn => {
@@ -374,7 +374,7 @@ export function mount() {
       const carId = btn.dataset.carId;
       const heartIcon = btn.querySelector('i');
       let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      
+
       if (favorites.includes(carId.toString())) {
         // Remove from favorites
         favorites = favorites.filter(id => id !== carId.toString());
@@ -388,9 +388,9 @@ export function mount() {
         heartIcon.classList.add('fas');
         heartIcon.style.color = '#3B82F6';
       }
-      
+
       localStorage.setItem('favorites', JSON.stringify(favorites));
-      
+
       // Update navbar favorite count
       if (window.updateFavoriteCount) {
         window.updateFavoriteCount();
@@ -406,10 +406,10 @@ export function mount() {
       const car = carsData.find(c => c.id === parseInt(carId));
       const carName = car ? car.brand : 'Mobil';
       const carPrice = car ? car.price : '';
-      
+
       const phoneNumber = '6281234567890'; // Ganti dengan nomor WA bisnis
       const message = encodeURIComponent(`Halo, saya tertarik dengan mobil:\n\n*${carName}*\nHarga: ${carPrice}\n\nMohon informasi lebih lanjut.`);
-      
+
       window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
     });
   });
@@ -417,6 +417,7 @@ export function mount() {
   // Test Drive button - navigate to test drive form
   document.querySelectorAll('.car-testdrive-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      console.log("a");
       e.stopPropagation();
       window.location.hash = '#test-drive';
     });
@@ -425,7 +426,7 @@ export function mount() {
   // Car detail button - navigate to related car detail
   const attachCarDetailListeners = () => {
     const carDetailButtons = document.querySelectorAll('.car-detail-btn');
-    
+
     carDetailButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -506,7 +507,7 @@ export function mount() {
 
       // Re-attach event listeners ke button yang baru
       attachCarDetailListeners();
-      
+
       // Scroll ke Merek Lain section
       const merekSection = document.querySelector('section.bg-\\[\\#14213D\\]');
       if (merekSection) {

@@ -1,6 +1,14 @@
 import { carsData } from "../data/mockData.js";
+import config from '../config/config.js';
+import { getAuth } from '../utils/auth.js';
+
+function getUser() {
+  const auth = getAuth();
+  return auth ? auth.user : null;
+}
 
 export default function TestDrive() {
+
   const carId = sessionStorage.getItem('selectedCarId');
   const car = carsData.find(c => c.id === parseInt(carId));
 
@@ -121,6 +129,9 @@ export default function TestDrive() {
 }
 
 export function mount() {
+  const user = getUser();
+  console.log("aaa", user)
+
   const form = document.getElementById('test-drive-form');
   const successModal = document.getElementById('success-modal');
 
@@ -131,50 +142,55 @@ export function mount() {
     dateInput.setAttribute('min', today);
   }
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Check if user is logged in
-    const userSession = localStorage.getItem('userSession') || sessionStorage.getItem('userSession');
-    const isLoggedIn = userSession ? JSON.parse(userSession) : null;
-    
-    if (!isLoggedIn) {
-      // Show login requirement message
+    if (!user) {
       showLoginRequiredModal();
       return;
     }
 
+    console.log("aaa", user)
+
+    // 2. Collect form data
     const formData = new FormData(form);
-    const carId = formData.get('carId');
-    
-    // Get car info from carsData
-    const car = carsData.find(c => c.id === parseInt(carId));
-    
-    const data = {
-      fullName: formData.get('fullName'),
-      phone: formData.get('phone'),
-      email: formData.get('email'),
-      testDate: formData.get('testDate'),
-      testTime: formData.get('testTime'),
-      message: formData.get('message'),
-      carId: carId,
-      carName: car ? car.brand : 'Tidak disebutkan',
-      carBrand: car ? car.type : '',
-      carImage: car ? car.image : ''
+
+    const payload = {
+      fullName: formData.get("fullName"),
+      phone: formData.get("phone"),
+      email: formData.get("email"),
+      testDate: formData.get("testDate"),
+      testTime: formData.get("testTime"),
+      message: formData.get("message"),
+      // carId: formData.get("carId"),
+      carId: "1c0ae965-7cd4-403a-9b68-7cebcce7bc83",
+      userId: user.id,
     };
 
-    // Save to localStorage (simulating backend)
-    const testDriveRequests = JSON.parse(localStorage.getItem('testDriveRequests') || '[]');
-    testDriveRequests.push({
-      ...data,
-      id: Date.now(),
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    });
-    localStorage.setItem('testDriveRequests', JSON.stringify(testDriveRequests));
+    try {
+      // 3. Call backend
+      const res = await fetch(config.TESTDRIVE_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-    // Show success modal
-    successModal.classList.remove('hidden');
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.message || "Gagal mendaftar test drive");
+      }
+
+      // 4. Success
+      successModal.classList.remove("hidden");
+      form.reset();
+
+    } catch (err) {
+      alert(err.message);
+    }
   });
 
   function showLoginRequiredModal() {
@@ -182,7 +198,7 @@ export function mount() {
     const loginModal = document.createElement('div');
     loginModal.id = 'login-required-modal';
     loginModal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 backdrop-blur-sm';
-    
+
     loginModal.innerHTML = `
       <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
         <div class="text-center">

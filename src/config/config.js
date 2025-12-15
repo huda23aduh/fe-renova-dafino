@@ -1,6 +1,7 @@
 // API Configuration
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 export const CARS_API_URL = `${API_BASE_URL}/cars`;
+export const TESTDRIVE_API_URL = `${API_BASE_URL}/test-drives`;
 export const BRANDS_API_URL = `${API_BASE_URL}/brands`;
 export const USERS_API_URL = `${API_BASE_URL}/users`;
 export const AUTH_API_URL = `${API_BASE_URL}/auth`;
@@ -14,6 +15,7 @@ export const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export default {
   API_BASE_URL,
   CARS_API_URL,
+  TESTDRIVE_API_URL,
   BRANDS_API_URL,
   USERS_API_URL,
   AUTH_API_URL,
