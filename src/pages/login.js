@@ -98,15 +98,8 @@ export default function LoginPage() {
 
             <p class="text-center text-sm text-gray-600">
               Sudah menjadi mitra di Renova Mobil?
-              <a href="#mitra-login" class="text-blue-600 font-semibold hover:underline">Masuk Jadi Mitra</a>
+              <a href="#admin-login" class="text-blue-600 font-semibold hover:underline">Masuk Jadi Mitra</a>
             </p>
-
-            <div class="mt-4 pt-4 border-t border-gray-200">
-              <a href="#admin-login" class="flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition">
-                <i class="fa-solid fa-user-shield"></i>
-                <span>Masuk sebagai Admin</span>
-              </a>
-            </div>
           </form>
         </div>
       </div>
