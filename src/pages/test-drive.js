@@ -149,8 +149,6 @@ export function mount() {
       return;
     }
 
-    console.log("aaa", user)
-
     // 2. Collect form data
     const formData = new FormData(form);
 
