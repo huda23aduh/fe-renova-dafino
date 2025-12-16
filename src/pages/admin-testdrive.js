@@ -160,7 +160,7 @@ async function fetchTestDrives() {
 // Function to update test drive status via API
 async function updateTestDriveStatus(id, status) {
   try {
-    const result = await testDriveApi.testDrives.update(id, { status });
+    const result = await testDriveApi.testDrives.confirm(id, { status });
     return result && result.success;
   } catch (error) {
     console.error('Error updating test drive:', error);

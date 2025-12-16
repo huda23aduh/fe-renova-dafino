@@ -41,6 +41,18 @@ export const api = {
       return response.json();
     },
 
+    confirm: async (id, userData) => {
+      const response = await fetch(`${TESTDRIVE_API_URL}/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData)
+      });
+      if (!response.ok) throw new Error('Failed to confirm TEST DRIVE');
+      return response.json();
+    },
+
     delete: async (id) => {
       const response = await fetch(`${TESTDRIVE_API_URL}/${id}`, {
         method: 'DELETE'
