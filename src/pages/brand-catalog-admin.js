@@ -228,30 +228,36 @@ export default function BrandCatalogAdminPage() {
             </div>
 
             <!-- Brand Icons Horizontal -->
-            <div class="flex gap-2 md:gap-4 mb-4 md:mb-6 overflow-x-auto pb-2 scrollbar-hide">
-              ${getAvailableBrands()
+           <!-- Grid Layout for Brands (alternative) -->
+            <div class="mb-4 md:mb-6">
+              <h3 class="text-sm md:text-base font-semibold mb-3 text-gray-300">Pilih Merek:</h3>
+              <div class="grid grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-2 md:gap-3">
+                ${getAvailableBrands()
       .map(
         (b) => `
-                <button class="admin-brand-filter-btn shrink-0 flex flex-col items-center gap-1 cursor-pointer" 
-                        data-brand="${b.name}">
-                  <div class="w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg"
-                    style="background: ${b.name.toUpperCase() === adminCurrentBrand.toUpperCase()
+                      <button class="admin-brand-filter-btn flex flex-col items-center gap-1 cursor-pointer p-1 hover:bg-gray-800/20 rounded-lg transition-all" 
+                              data-brand="${b.name}"
+                              title="${b.name}">
+                        <div class="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300"
+                          style="background: ${b.name.toUpperCase() === adminCurrentBrand.toUpperCase()
             ? "linear-gradient(45deg, #FFB703 0%, #FFA500 100%)"
-            : "linear-gradient(45deg, #FFB703 0%, #14213D 50%, #FFB703 100%)"
+            : "linear-gradient(45deg, rgba(255, 183, 3, 0.7) 0%, rgba(20, 33, 61, 0.7) 50%, rgba(255, 183, 3, 0.7) 100%)"
           };">
-                    <img src="${b.image}" 
-                         class="w-6 h-6 md:w-8 md:h-8 object-contain"
-                         style="filter: ${b.name.toUpperCase() === adminCurrentBrand.toUpperCase()
-            ? "brightness(0)"
-            : "brightness(1)"
+                          <img src="${b.image}" 
+                              class="w-6 h-6 md:w-7 md:h-7 object-contain transition-all duration-300"
+                              style="filter: ${b.name.toUpperCase() === adminCurrentBrand.toUpperCase()
+            ? "brightness(0) contrast(1.2)"
+            : "brightness(1) contrast(1)"
           };" 
-                        onerror="this.src='/images/car-default.png'">
-                  </div>
-                  <span class="text-xs mt-1">${b.name}</span>
-                </button>
-              `
+                              onerror="this.src='/images/car-default.png'"
+                              alt="${b.name}">
+                        </div>
+                        <span class="text-xs mt-1 text-center font-medium truncate w-full">${b.name}</span>
+                      </button>
+                    `
       )
       .join("")}
+              </div>
             </div>
 
             <!-- Brand Title -->
