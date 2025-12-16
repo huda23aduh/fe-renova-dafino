@@ -67,7 +67,7 @@ export default function AdminTestDrive() {
                 <i class="fa-solid fa-car text-blue-500 text-xl"></i>
               </div>
               <div>
-                <p class="text-2xl font-bold text-gray-800">0</p>
+                <p class="text-2xl font-bold text-gray-800" id="total-requests-count">0</p>
                 <p class="text-sm text-gray-500">Total Permintaan</p>
               </div>
             </div>
@@ -79,7 +79,7 @@ export default function AdminTestDrive() {
                 <i class="fa-solid fa-clock text-yellow-500 text-xl"></i>
               </div>
               <div>
-                <p class="text-2xl font-bold text-gray-800">0</p>
+                <p class="text-2xl font-bold text-gray-800" id="pending-requests-count">0</p>
                 <p class="text-sm text-gray-500">Menunggu Konfirmasi</p>
               </div>
             </div>
@@ -346,19 +346,25 @@ function updateUI(testDrives) {
   updateStats(testDrives);
 }
 
-// Update stats
+// Update stats - FIXED: Now uses proper IDs
 function updateStats(testDrives) {
-  const totalCountEl = document.querySelector('.text-2xl.font-bold.text-gray-800:first-child');
-  const pendingCountEl = document.querySelector('.text-2xl.font-bold.text-gray-800:last-child');
-
+  // Get total count element
+  const totalCountEl = document.getElementById('total-requests-count');
   if (totalCountEl) {
     totalCountEl.textContent = testDrives.length;
   }
 
+  // Get pending count element
+  const pendingCountEl = document.getElementById('pending-requests-count');
   if (pendingCountEl) {
     const pendingCount = testDrives.filter(r => r.status === 'pending').length;
     pendingCountEl.textContent = pendingCount;
   }
+
+  // Debug log to check counts
+  console.log('Total requests:', testDrives.length);
+  console.log('Pending requests:', testDrives.filter(r => r.status === 'pending').length);
+  console.log('Status breakdown:', testDrives.map(r => ({ id: r.id, status: r.status })));
 }
 
 export async function mount() {
@@ -389,7 +395,9 @@ export async function mount() {
 // Load data
 async function loadData() {
   try {
+    console.log('Loading test drive data...');
     const testDrives = await fetchTestDrives();
+    console.log('Loaded test drives:', testDrives);
     updateUI(testDrives);
   } catch (error) {
     console.error('Error loading data:', error);
