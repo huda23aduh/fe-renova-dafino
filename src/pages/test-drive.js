@@ -130,7 +130,6 @@ export default function TestDrive() {
 
 export function mount() {
   const user = getUser();
-  console.log("aaa", user)
 
   const form = document.getElementById('test-drive-form');
   const successModal = document.getElementById('success-modal');
@@ -162,8 +161,7 @@ export function mount() {
       testDate: formData.get("testDate"),
       testTime: formData.get("testTime"),
       message: formData.get("message"),
-      // carId: formData.get("carId"),
-      carId: "1c0ae965-7cd4-403a-9b68-7cebcce7bc83",
+      carId: formData.get("carId"),
       userId: user.id,
     };
 
