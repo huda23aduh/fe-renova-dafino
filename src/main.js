@@ -2,14 +2,14 @@
 import "../global.css";
 
 // Source code protection
-import "./components/sections/source-protection.js";
+// import "./components/sections/source-protection.js";
 
 import router from "./router.js";
 import Navbar, { mountNavbar } from "./components/sections/navbar.js";
 import Footer from "./components/sections/footer.js";
 
 // Global toast notification function
-window.showToast = function(message, type = 'success', duration = 3000) {
+window.showToast = function (message, type = 'success', duration = 3000) {
   // Remove existing toast
   const existingToast = document.getElementById('global-toast');
   if (existingToast) existingToast.remove();
@@ -43,7 +43,7 @@ window.showToast = function(message, type = 'success', duration = 3000) {
 };
 
 // Global confirm dialog function
-window.showConfirm = function(message, onConfirm, onCancel) {
+window.showConfirm = function (message, onConfirm, onCancel) {
   // Remove existing confirm
   const existingConfirm = document.getElementById('global-confirm');
   if (existingConfirm) existingConfirm.remove();
@@ -92,7 +92,7 @@ export default function initApp() {
     document.getElementById("navbar").innerHTML = Navbar();
     mountNavbar();
     router(); // render halaman aktif
-    
+
     // Update footer visibility berdasarkan halaman
     updateFooterVisibility();
     updateNavbarVisibility();
@@ -106,7 +106,7 @@ function updateFooterVisibility() {
   const page = window.location.hash.replace("#", "") || "home";
   const footerEl = document.getElementById("footer");
   const showFooterPages = ["home"];
-  
+
   if (showFooterPages.includes(page)) {
     footerEl.innerHTML = Footer();
   } else {
