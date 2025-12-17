@@ -1,4 +1,12 @@
 import { contactData } from "../data/mockData.js";
+import config from '../config/config.js';
+import { getAuth } from '../utils/auth.js';
+import { showLoginRequiredModal } from "../utils/modals/loginRequiredModal.js";
+
+function getUser() {
+  const auth = getAuth();
+  return auth ? auth.user : null;
+}
 
 export default function Contact() {
   const topCards = contactData.slice(0, 3);
@@ -171,6 +179,8 @@ export default function Contact() {
 }
 
 export function mount() {
+  const user = getUser();
+
   const form = document.getElementById('contact-form');
   const successModal = document.getElementById('contact-success-modal');
   const closeModalBtn = document.getElementById('close-contact-modal');
@@ -179,35 +189,48 @@ export function mount() {
   loadAdminReplies();
 
   if (form) {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const formData = new FormData(form);
-      const data = {
-        name: formData.get('name'),
-        email: formData.get('email'),
-        message: formData.get('message'),
-        status: 'unread',
-        createdAt: new Date().toISOString()
-      };
-
-      // Save to localStorage
-      const contactMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-      contactMessages.unshift(data); // Add to beginning
-      localStorage.setItem('contactMessages', JSON.stringify(contactMessages));
-
-      // Reset form
-      form.reset();
-
-      // Show success modal
-      if (successModal) {
-        successModal.classList.remove('hidden');
+      if (!user) {
+        showLoginRequiredModal();
+        return;
       }
 
-      // Refresh admin replies after sending message
-      setTimeout(() => {
-        loadAdminReplies();
-      }, 500);
+      // 2. Collect form data
+      const formData = new FormData(form);
+
+      const payload = {
+        name: formData.get("name"),
+        email: formData.get("email"),
+        message: formData.get("message"),
+        userId: user.id,
+      };
+
+      try {
+        // 3. Call backend
+        const res = await fetch(config.CONTACTMESSAGE_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          throw new Error(result.message || "Gagal kirim message");
+        }
+
+        // 4. Success
+        successModal.classList.remove("hidden");
+        form.reset();
+
+      } catch (err) {
+        alert(err.message);
+      }
     });
   }
 
@@ -242,18 +265,18 @@ function loadAdminReplies() {
 
   // Get contact messages from localStorage
   const contactMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-  
+
   // Filter messages that have replies
   const messagesWithReplies = contactMessages.filter(msg => msg.reply && msg.reply.trim() !== '');
-  
+
   if (messagesWithReplies.length > 0) {
     // Show replies section
     repliesSection.classList.remove('hidden');
     noRepliesMessage.classList.add('hidden');
-    
+
     // Sort by repliedAt date (newest first)
     messagesWithReplies.sort((a, b) => new Date(b.repliedAt) - new Date(a.repliedAt));
-    
+
     // Render replies
     repliesContainer.innerHTML = messagesWithReplies.map((message, index) => `
       <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">

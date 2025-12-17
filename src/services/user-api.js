@@ -9,7 +9,6 @@ export const api = {
   users: {
     getAll: async () => {
       const response = await fetch(`${USERS_API_URL}`);
-      console.log("bbbb", response);
       if (!response.ok) throw new Error('Failed to fetch users');
       return response.json();
     },

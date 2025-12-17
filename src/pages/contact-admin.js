@@ -1,9 +1,10 @@
 import AdminSidebar, { mount as adminSidebarMount } from "../components/sections/admin-sidebar.js";
+import { api as contactMessageApi } from "../services/contact-message-api.js";
+
+let contactMessages = [];
+
 
 export default function ContactAdminPage() {
-  // Get contact messages from localStorage
-  const contactMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-  
   return `
   <div class="min-h-screen bg-gray-100">
     ${AdminSidebar('contact-admin')}
@@ -105,54 +106,17 @@ export default function ContactAdminPage() {
             <h3 class="font-bold text-gray-800">Daftar Pesan (${contactMessages.length})</h3>
           </div>
           
-          ${contactMessages.length > 0 ? `
-          <div class="divide-y divide-gray-200">
-            ${contactMessages.map((message, index) => `
-              <div class="p-4 hover:bg-gray-50 transition message-item" data-status="${message.status || 'unread'}">
-                <div class="flex items-start gap-4">
-                  <div class="w-12 h-12 bg-${message.status === 'unread' ? 'blue' : message.status === 'replied' ? 'purple' : 'green'}-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <i class="fa-solid fa-user text-${message.status === 'unread' ? 'blue' : message.status === 'replied' ? 'purple' : 'green'}-500"></i>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 mb-1">
-                      <h4 class="font-semibold text-gray-800 ${message.status === 'unread' ? 'font-bold' : ''}">${message.name}</h4>
-                      <span class="px-2 py-0.5 text-xs font-medium rounded-full ${
-                        message.status === 'unread' ? 'bg-yellow-100 text-yellow-800' :
-                        message.status === 'replied' ? 'bg-purple-100 text-purple-800' :
-                        'bg-green-100 text-green-800'
-                      }">
-                        ${message.status === 'unread' ? 'Belum Dibaca' : message.status === 'replied' ? 'Sudah Dibalas' : 'Sudah Dibaca'}
-                      </span>
-                    </div>
-                    <p class="text-sm text-gray-500 mb-1">${message.email}</p>
-                    <p class="text-sm text-gray-700 line-clamp-2">${message.message}</p>
-                    <p class="text-xs text-gray-400 mt-2">${message.createdAt ? new Date(message.createdAt).toLocaleString('id-ID') : '-'}</p>
-                  </div>
-                  <div class="flex gap-1 flex-shrink-0">
-                    <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition view-message-btn" data-message-index="${index}" title="Lihat Detail">
-                      <i class="fa-solid fa-eye"></i>
-                    </button>
-                    <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition mark-read-btn ${message.status !== 'unread' ? 'opacity-50 cursor-not-allowed' : ''}" data-message-index="${index}" title="Tandai Dibaca" ${message.status !== 'unread' ? 'disabled' : ''}>
-                      <i class="fa-solid fa-check"></i>
-                    </button>
-                    <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-purple-100 text-purple-600 hover:bg-purple-200 transition reply-message-btn" data-message-index="${index}" title="Balas">
-                      <i class="fa-solid fa-reply"></i>
-                    </button>
-                    <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition delete-message-btn" data-message-index="${index}" title="Hapus">
-                      <i class="fa-solid fa-trash"></i>
-                    </button>
-                  </div>
-                </div>
+          <!-- Messages List -->
+          <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            </div>
+
+            <div id="messages-container">
+              <div class="p-8 text-center text-gray-400">
+                Loading pesan...
               </div>
-            `).join('')}
+            </div>
           </div>
-          ` : `
-          <div class="p-8 text-center">
-            <i class="fa-solid fa-envelope-open text-4xl text-gray-300 mb-4"></i>
-            <p class="text-gray-500">Belum ada pesan masuk</p>
-            <p class="text-sm text-gray-400">Pesan dari pengunjung akan muncul di sini</p>
-          </div>
-          `}
+
         </div>
       </div>
     </main>
@@ -160,9 +124,18 @@ export default function ContactAdminPage() {
   `;
 }
 
-export function mount() {
+
+export async function mount() {
   // Mount sidebar functionality
   adminSidebarMount();
+
+  try {
+    const res = await contactMessageApi.contactMessages.getAll();
+    renderMessages(res.data);
+    // updateStats(contactMessages);
+  } catch (err) {
+    showModal("Error", err.message, "error");
+  }
 
   // Search functionality
   const searchInput = document.getElementById('message-search');
@@ -225,30 +198,183 @@ export function mount() {
     });
   });
 
-  return () => {};
+  return () => { };
 }
+
+function renderMessages(messages) {
+  const container = document.getElementById("messages-container");
+  const countEl = document.getElementById("messages-count");
+
+  if (!container) {
+    console.warn("messages-container not found");
+    return;
+  }
+
+  // Update count
+  if (countEl) {
+    countEl.textContent = messages.length;
+  }
+
+  // Empty state
+  if (!messages || messages.length === 0) {
+    container.innerHTML = `
+      <div class="p-10 text-center">
+        <i class="fa-solid fa-inbox text-4xl text-gray-300 mb-3"></i>
+        <p class="text-gray-500">Belum ada pesan masuk</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="divide-y divide-gray-200">
+      ${messages.map((msg) => `
+        <div 
+          class="p-4 message-item flex justify-between items-start gap-4
+          ${msg.status === "unread" ? "bg-yellow-50" : "bg-white"}"
+          data-id="${msg.id}"
+        >
+
+          <!-- LEFT -->
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <h4 class="font-semibold text-gray-800">${msg.name}</h4>
+
+              ${msg.status === "unread"
+      ? `<span class="text-xs bg-yellow-400 text-white px-2 py-0.5 rounded">UNREAD</span>`
+      : msg.status === "replied"
+        ? `<span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded">REPLIED</span>`
+        : `<span class="text-xs bg-gray-300 text-gray-700 px-2 py-0.5 rounded">READ</span>`
+    }
+            </div>
+
+            <p class="text-sm text-gray-500">${msg.email}</p>
+            <p class="mt-2 text-gray-700 line-clamp-2">
+              ${msg.message}
+            </p>
+          </div>
+
+          <!-- ACTIONS -->
+          <div class="flex gap-2 shrink-0">
+            <button
+              class="view-message-btn px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              data-id="${msg.id}"
+              title="View / Read"
+            >
+              <i class="fa-solid fa-eye"></i>
+            </button>
+
+            <button
+              class="delete-message-btn px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+              data-id="${msg.id}"
+              title="Delete"
+            >
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+
+  // IMPORTANT: bind events AFTER render
+  bindMessageActions();
+}
+
+
+function showReadModal(message) {
+  const modal = document.createElement("div");
+  modal.className = "fixed inset-0 z-50 bg-black/40 flex items-center justify-center";
+
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+      <h3 class="font-bold text-lg mb-2">${message.name}</h3>
+      <p class="text-sm text-gray-500 mb-4">${message.email}</p>
+      <p class="mb-4">${message.message}</p>
+
+      <div class="flex gap-2">
+        <button id="reply-btn" class="flex-1 bg-blue-500 text-white py-2 rounded">
+          Reply
+        </button>
+        <button id="close-btn" class="flex-1 bg-gray-300 py-2 rounded">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector("#close-btn").onclick = () => modal.remove();
+  modal.querySelector("#reply-btn").onclick = () => {
+    modal.remove();
+    showReplyModal(message);
+  };
+}
+
+function showReplyModal(message) {
+  const modal = document.createElement("div");
+  modal.className = "fixed inset-0 z-50 bg-black/40 flex items-center justify-center";
+
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+      <h3 class="font-bold mb-2">Reply to ${message.email}</h3>
+
+      <textarea id="reply-text" rows="4"
+        class="w-full border rounded p-2 mb-4"
+        placeholder="Type your reply..."></textarea>
+
+      <div class="flex gap-2">
+        <button id="send-reply" class="flex-1 bg-blue-500 text-white py-2 rounded">
+          Send
+        </button>
+        <button id="cancel-reply" class="flex-1 bg-gray-300 py-2 rounded">
+          Cancel
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector("#cancel-reply").onclick = () => modal.remove();
+
+  modal.querySelector("#send-reply").onclick = async () => {
+    const replyText = modal.querySelector("#reply-text").value.trim();
+    if (!replyText) return alert("Reply message required");
+
+    await contactMessageApi.reply(message.id, replyText);
+
+    message.status = "replied";
+    modal.remove();
+
+    renderMessages(contactMessages);
+  };
+}
+
+
 
 function filterMessages() {
   const searchTerm = document.getElementById('message-search')?.value.toLowerCase() || '';
   const filterStatus = document.getElementById('message-filter-status')?.value || '';
 
   const messageItems = document.querySelectorAll('.message-item');
-  
+
   messageItems.forEach(item => {
     const name = item.querySelector('h4')?.textContent.toLowerCase() || '';
     const email = item.querySelector('.text-gray-500')?.textContent.toLowerCase() || '';
     const status = item.dataset.status || '';
-    
+
     const matchesSearch = !searchTerm || name.includes(searchTerm) || email.includes(searchTerm);
     const matchesFilter = !filterStatus || status === filterStatus;
-    
+
     item.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
   });
 }
 
 function exportMessages() {
   const contactMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-  const csvContent = "data:text/csv;charset=utf-8," 
+  const csvContent = "data:text/csv;charset=utf-8,"
     + "Name,Email,Message,Status,Date\n"
     + contactMessages.map(msg => `"${msg.name}","${msg.email}","${msg.message.replace(/"/g, '""')}","${msg.status}","${msg.createdAt}"`).join("\n");
 
@@ -323,7 +449,7 @@ function showModal(title, message, type = 'info', onConfirm = null) {
 function viewMessage(messageIndex) {
   const contactMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
   const message = contactMessages[messageIndex];
-  
+
   if (message) {
     // Mark as read if unread
     if (message.status === 'unread') {
@@ -359,11 +485,10 @@ function viewMessage(messageIndex) {
           <div class="grid grid-cols-2 gap-4">
             <div>
               <p class="text-sm text-gray-500">Status</p>
-              <span class="px-2 py-1 text-xs font-semibold rounded-full ${
-                message.status === 'unread' ? 'bg-yellow-100 text-yellow-800' :
-                message.status === 'replied' ? 'bg-purple-100 text-purple-800' :
-                'bg-green-100 text-green-800'
-              }">
+              <span class="px-2 py-1 text-xs font-semibold rounded-full ${message.status === 'unread' ? 'bg-yellow-100 text-yellow-800' :
+        message.status === 'replied' ? 'bg-purple-100 text-purple-800' :
+          'bg-green-100 text-green-800'
+      }">
                 ${message.status === 'unread' ? 'Belum Dibaca' : message.status === 'replied' ? 'Sudah Dibalas' : 'Sudah Dibaca'}
               </span>
             </div>
@@ -384,7 +509,7 @@ function viewMessage(messageIndex) {
       </div>
     `;
     document.body.appendChild(modal);
-    
+
     document.getElementById('close-message-modal').addEventListener('click', () => {
       modal.remove();
       window.location.reload();
@@ -409,7 +534,7 @@ function viewMessage(messageIndex) {
 function markAsRead(messageIndex) {
   const contactMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
   const message = contactMessages[messageIndex];
-  
+
   if (message && message.status === 'unread') {
     contactMessages[messageIndex].status = 'read';
     localStorage.setItem('contactMessages', JSON.stringify(contactMessages));
@@ -421,7 +546,7 @@ function markAsRead(messageIndex) {
 function replyMessage(messageIndex) {
   const contactMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
   const message = contactMessages[messageIndex];
-  
+
   if (message) {
     const modal = document.createElement('div');
     modal.id = 'reply-modal';
@@ -518,7 +643,7 @@ function replyMessage(messageIndex) {
       </div>
     `;
     document.body.appendChild(modal);
-    
+
     // Sidebar message click handler
     document.querySelectorAll('.message-sidebar-item').forEach(item => {
       item.addEventListener('click', (e) => {
@@ -527,7 +652,7 @@ function replyMessage(messageIndex) {
         replyMessage(newIndex);
       });
     });
-    
+
     document.getElementById('close-reply-modal').addEventListener('click', () => modal.remove());
     document.getElementById('cancel-reply-btn').addEventListener('click', () => modal.remove());
     document.getElementById('send-reply-btn').addEventListener('click', () => {
@@ -536,10 +661,10 @@ function replyMessage(messageIndex) {
         contactMessages[messageIndex].status = 'replied';
         contactMessages[messageIndex].reply = replyText;
         contactMessages[messageIndex].repliedAt = new Date().toISOString();
-        
+
         // Update localStorage
         localStorage.setItem('contactMessages', JSON.stringify(contactMessages));
-        
+
         // Save notification for user
         const notifications = JSON.parse(localStorage.getItem('contactNotifications') || '[]');
         notifications.unshift({
@@ -553,12 +678,12 @@ function replyMessage(messageIndex) {
           read: false
         });
         localStorage.setItem('contactNotifications', JSON.stringify(notifications));
-        
+
         // Update navbar notification count
         if (window.updateNotificationCount) {
           window.updateNotificationCount();
         }
-        
+
         modal.remove();
         showModal('Berhasil', 'Balasan berhasil dikirim dan notifikasi telah dikirim ke user', 'success');
         setTimeout(() => window.location.reload(), 1500);
@@ -574,7 +699,7 @@ function replyMessage(messageIndex) {
 
 function deleteAllMessages() {
   const contactMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-  
+
   if (contactMessages.length === 0) {
     showModal('Peringatan', 'Tidak ada pesan untuk dihapus', 'warning');
     return;
@@ -587,16 +712,59 @@ function deleteAllMessages() {
   });
 }
 
-function deleteMessage(messageIndex) {
-  const contactMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-  const message = contactMessages[messageIndex];
-  
-  if (message) {
-    showModal('Hapus Pesan', `Apakah Anda yakin ingin menghapus pesan dari ${message.name}?`, 'error', () => {
-      contactMessages.splice(messageIndex, 1);
-      localStorage.setItem('contactMessages', JSON.stringify(contactMessages));
-      showModal('Berhasil', 'Pesan berhasil dihapus', 'success');
-      setTimeout(() => window.location.reload(), 1500);
-    });
-  }
+async function deleteMessage(id) {
+  await contactMessageApi.contactMessages.delete(id);
+
+  contactMessages = contactMessages.filter(m => m.id !== id);
+
+  const res = await contactMessageApi.contactMessages.getAll();
+  renderMessages(res.data);
+}
+
+function bindMessageActions() {
+  const container = document.getElementById("messages-container");
+
+  if (!container) return;
+
+  container.onclick = async (e) => {
+    // Handle delete button clicks
+    const deleteBtn = e.target.closest(".delete-message-btn");
+    if (deleteBtn) {
+      const id = deleteBtn.dataset.id;
+
+      // Replace confirm with your custom modal
+      showModal('Konfirmasi Hapus',
+        'Apakah Anda yakin ingin menghapus pesan ini? Tindakan ini tidak dapat dibatalkan.',
+        'confirm',
+        async () => {
+          await deleteMessage(id);
+        }
+      );
+      return;
+    }
+
+    // Handle view button clicks
+    const viewBtn = e.target.closest(".view-message-btn");
+    if (viewBtn) {
+      const id = viewBtn.dataset.id;
+
+      // Find the message in contactMessages array
+      const message = contactMessages.find(m => m.id == id);
+      if (message) {
+        // Mark as read if unread
+        if (message.status === 'unread') {
+          try {
+            await contactMessageApi.contactMessages.update(id, { status: 'read' });
+            message.status = 'read';
+          } catch (err) {
+            showModal("Error", err.message, "error");
+          }
+        }
+
+        // Show the message details
+        showReadModal(message);
+      }
+      return;
+    }
+  };
 }
